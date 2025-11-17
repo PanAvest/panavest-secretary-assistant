@@ -1,92 +1,70 @@
 // src/components/MeetingList.jsx
 import React from "react";
+import { Pencil, Trash2 } from "lucide-react";
 
-export default function MeetingList({ items, onSelect, onEdit, onDelete }) {
-  if (!items.length) {
+export default function MeetingList({ meetings, loading, onEdit, onDelete }) {
+  if (loading) {
+    return <p className="text-sm text-gray-500">Loading meetings…</p>;
+  }
+
+  if (!loading && meetings.length === 0) {
     return (
-      <div className="card px-4 py-6 flex flex-col items-center justify-center text-center">
-        <div className="text-sm font-semibold text-slate-700 mb-1">
-          No meetings yet
-        </div>
-        <p className="text-xs text-slate-500 max-w-xs">
-          Use the <span className="font-medium">New meeting</span> button to add
-          Prof&apos;s schedule for the day or week.
-        </p>
-      </div>
+      <p className="text-sm text-gray-500">
+        No meetings scheduled yet. Click <strong>New Meeting</strong> to create
+        one.
+      </p>
     );
   }
 
   return (
-    <div className="card divide-y divide-slate-100">
-      {items.map((m) => (
+    <div className="space-y-3">
+      {meetings.map((m) => (
         <div
           key={m.id}
-          className="w-full px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2 hover:bg-slate-50"
+          className="border rounded-lg p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2 bg-white"
         >
-          <button
-            type="button"
-            onClick={() => onSelect?.(m)}
-            className="text-left flex-1"
-          >
-            <div className="text-sm font-semibold text-slate-800">
-              {m.title}
-            </div>
-            <div className="text-xs text-slate-500 flex flex-wrap gap-1">
-              <span>
-                {m.meeting_date} • {m.start_time?.slice(0, 5)}
-                {m.end_time ? `–${m.end_time.slice(0, 5)}` : ""}
-              </span>
-              {m.venue && (
-                <>
-                  <span>•</span>
-                  <span>{m.venue}</span>
-                </>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-medium text-sm md:text-base">{m.title}</h3>
+              {m.meeting_date && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
+                  {m.meeting_date} {m.start_time ? `• ${m.start_time}` : ""}
+                </span>
               )}
             </div>
+
+            {m.venue && (
+              <p className="text-xs text-gray-600 mt-1">Venue: {m.venue}</p>
+            )}
+
             {m.agenda && (
-              <div className="mt-1 text-xs text-slate-600 line-clamp-2">
+              <p className="text-xs text-gray-700 mt-1 line-clamp-2">
                 {m.agenda}
-              </div>
+              </p>
             )}
-          </button>
 
-          <div className="flex items-center justify-between md:flex-col md:items-end gap-2">
-            <span
-              className={[
-                "badge",
-                m.status === "completed"
-                  ? "bg-emerald-50 text-emerald-700"
-                  : m.status === "cancelled"
-                  ? "bg-rose-50 text-rose-700"
-                  : "bg-panablue/5 text-panablue",
-              ].join(" ")}
+            {Array.isArray(m.participants) && m.participants.length > 0 && (
+              <p className="text-[11px] text-gray-500 mt-1">
+                Participants: {m.participants.length}
+              </p>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onEdit(m)}
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs border rounded-md hover:bg-gray-50"
             >
-              {m.status || "scheduled"}
-            </span>
-
-            <div className="flex items-center gap-2 text-[11px]">
-              <button
-                type="button"
-                className="text-panablue hover:underline"
-                onClick={() => onEdit?.(m)}
-              >
-                Edit
-              </button>
-              <button
-                type="button"
-                className="text-rose-600 hover:underline"
-                onClick={() => onDelete?.(m)}
-              >
-                Delete
-              </button>
-            </div>
-
-            {m.attendees && m.attendees.length > 0 && (
-              <span className="text-[11px] text-slate-500">
-                With {m.attendees.slice(0, 2).join(", ")}
-                {m.attendees.length > 2 ? ` +${m.attendees.length - 2}` : ""}
-              </span>
-            )}
+              <Pencil size={14} />
+              Edit
+            </button>
+            <button
+              onClick={() => onDelete(m.id)}
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs border border-red-200 text-red-600 rounded-md hover:bg-red-50"
+            >
+              <Trash2 size={14} />
+              Delete
+            </button>
           </div>
         </div>
       ))}

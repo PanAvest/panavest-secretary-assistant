@@ -3,229 +3,218 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 export default function MeetingForm({ onSave, onCancel, saving, existing }) {
-  const [title, setTitle] = useState(existing?.title || "");
-  const [meetingDate, setMeetingDate] = useState(existing?.meeting_date || "");
-  const [startTime, setStartTime] = useState(existing?.start_time || "");
-  const [venue, setVenue] = useState(existing?.venue || "");
-  const [agenda, setAgenda] = useState(existing?.agenda || "");
-  const [comments, setComments] = useState(existing?.comments || "");
+  const [title, setTitle] = useState("");
+  const [meetingDate, setMeetingDate] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [venue, setVenue] = useState("");
+  const [agenda, setAgenda] = useState("");
+  const [comments, setComments] = useState("");
+  const [selectedParticipants, setSelectedParticipants] = useState([]);
 
   const [profiles, setProfiles] = useState([]);
-  const [profilesLoading, setProfilesLoading] = useState(true);
-  const [selectedEmails, setSelectedEmails] = useState(
-    existing?.participant_emails || []
-  );
-  const [error, setError] = useState("");
+  const [loadingProfiles, setLoadingProfiles] = useState(true);
 
-  // If `existing` changes while form is open, sync fields
+  // Load profiles once
   useEffect(() => {
-    setTitle(existing?.title || "");
-    setMeetingDate(existing?.meeting_date || "");
-    setStartTime(existing?.start_time || "");
-    setVenue(existing?.venue || "");
-    setAgenda(existing?.agenda || "");
-    setComments(existing?.comments || "");
-    setSelectedEmails(existing?.participant_emails || []);
-  }, [existing]);
+    let isMounted = true;
 
-  useEffect(() => {
+    async function loadProfiles() {
+      setLoadingProfiles(true);
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .order("full_name");
+
+      if (!isMounted) return;
+
+      if (error) {
+        console.error("Error loading profiles:", error);
+        setProfiles([]);
+      } else {
+        setProfiles(data || []);
+      }
+      setLoadingProfiles(false);
+    }
+
     loadProfiles();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  async function loadProfiles() {
-    setProfilesLoading(true);
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("id, full_name, email")
-      .order("full_name", { ascending: true });
-
-    if (error) {
-      console.error("Could not load profiles", error);
+  // Populate form when editing OR clear when creating new
+  useEffect(() => {
+    if (existing) {
+      setTitle(existing.title || "");
+      setMeetingDate(existing.meeting_date || "");
+      setStartTime(existing.start_time || "");
+      setVenue(existing.venue || "");
+      setAgenda(existing.agenda || "");
+      setComments(existing.comments || "");
+      setSelectedParticipants(existing.participants || []);
     } else {
-      setProfiles(data || []);
+      setTitle("");
+      setMeetingDate("");
+      setStartTime("");
+      setVenue("");
+      setAgenda("");
+      setComments("");
+      setSelectedParticipants([]);
     }
-    setProfilesLoading(false);
-  }
+  }, [existing]);
 
-  function toggleEmail(email) {
-    setSelectedEmails((prev) =>
-      prev.includes(email)
-        ? prev.filter((e) => e !== email)
-        : [...prev, email]
+  function toggleParticipant(id) {
+    setSelectedParticipants((prev) =>
+      prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
     );
   }
 
   function handleSubmit(e) {
     e.preventDefault();
-    setError("");
-
-    if (!title.trim()) {
-      setError("Please enter a title for the meeting.");
-      return;
-    }
-    if (!meetingDate) {
-      setError("Please select a date.");
-      return;
-    }
-
-    const payload = {
-      title: title.trim(),
+    onSave({
+      title,
       meeting_date: meetingDate,
-      start_time: startTime || null,
-      venue: venue?.trim() || null,
-      agenda: agenda?.trim() || null,
-      comments: comments?.trim() || null,
-      participant_emails: selectedEmails,
-    };
-
-    onSave && onSave(payload);
+      start_time: startTime,
+      venue,
+      agenda,
+      comments,
+      participants: selectedParticipants,
+    });
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 text-sm">
-      <div className="grid md:grid-cols-2 gap-3">
-        <div className="md:col-span-2">
-          <label className="block text-xs font-medium text-slate-600 mb-1.5">
-            Meeting title
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <h2 className="text-lg font-semibold mb-2">
+        {existing ? "Edit Meeting" : "New Meeting"}
+      </h2>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Title<span className="text-red-500">*</span>
           </label>
           <input
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40"
-            placeholder="Board review with Prof"
+            type="text"
+            className="w-full border rounded-md px-3 py-2 text-sm"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            required
           />
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1.5">
-            Date
+          <label className="block text-sm font-medium mb-1">
+            Meeting Date<span className="text-red-500">*</span>
           </label>
           <input
             type="date"
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40"
+            className="w-full border rounded-md px-3 py-2 text-sm"
             value={meetingDate}
             onChange={(e) => setMeetingDate(e.target.value)}
+            required
           />
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1.5">
-            Start time
+          <label className="block text-sm font-medium mb-1">
+            Start Time<span className="text-red-500">*</span>
           </label>
           <input
             type="time"
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40"
+            className="w-full border rounded-md px-3 py-2 text-sm"
             value={startTime}
             onChange={(e) => setStartTime(e.target.value)}
+            required
           />
         </div>
 
-        <div className="md:col-span-2">
-          <label className="block text-xs font-medium text-slate-600 mb-1.5">
-            Venue
-          </label>
+        <div>
+          <label className="block text-sm font-medium mb-1">Venue</label>
           <input
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40"
-            placeholder="PanAvest Office / Zoom / Teams"
+            type="text"
+            className="w-full border rounded-md px-3 py-2 text-sm"
             value={venue}
             onChange={(e) => setVenue(e.target.value)}
+            placeholder="Boardroom, Online (Zoom), etc."
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-slate-600 mb-1.5">
-          Agenda / purpose
-        </label>
+        <label className="block text-sm font-medium mb-1">Agenda</label>
         <textarea
+          className="w-full border rounded-md px-3 py-2 text-sm"
           rows={3}
-          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40"
-          placeholder="Key discussion points, decisions needed, documents to review..."
           value={agenda}
           onChange={(e) => setAgenda(e.target.value)}
+          placeholder="Key topics to discuss..."
         />
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-slate-600 mb-1.5">
-          Participants on the platform
-        </label>
-        <div className="border border-slate-200 rounded-xl p-3 max-h-40 overflow-auto bg-slate-50/60">
-          {profilesLoading ? (
-            <div className="text-xs text-slate-500">Loading users...</div>
-          ) : profiles.length === 0 ? (
-            <div className="text-xs text-slate-500">
-              No other users yet. Once more people sign up, you can tag them
-              here so meetings appear on their dashboards.
-            </div>
-          ) : (
-            <ul className="space-y-1">
-              {profiles.map((p) => {
-                const email = (p.email || "").toLowerCase();
-                const checked = selectedEmails.includes(email);
-                return (
-                  <li key={p.id}>
-                    <label className="flex items-center gap-2 text-xs cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="rounded border-slate-300"
-                        checked={checked}
-                        onChange={() => toggleEmail(email)}
-                      />
-                      <span className="font-medium text-slate-800">
-                        {p.full_name || email}
-                      </span>
-                      {p.full_name && (
-                        <span className="text-[11px] text-slate-500">
-                          ({email})
-                        </span>
-                      )}
-                    </label>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-        <p className="text-[11px] text-slate-400 mt-1">
-          Anyone you tick here will see this meeting on their dashboard when
-          they sign in with that email.
-        </p>
-      </div>
-
-      <div>
-        <label className="block text-xs font-medium text-slate-600 mb-1.5">
-          Comments / notes (optional)
-        </label>
+        <label className="block text-sm font-medium mb-1">Comments</label>
         <textarea
+          className="w-full border rounded-md px-3 py-2 text-sm"
           rows={2}
-          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40"
-          placeholder="Log key outcomes, follow-ups or internal notes."
           value={comments}
           onChange={(e) => setComments(e.target.value)}
+          placeholder="Any additional notes..."
         />
       </div>
 
-      {error && (
-        <div className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
-          {error}
-        </div>
-      )}
+      <div>
+        <label className="block text-sm font-medium mb-1">Participants</label>
+        {loadingProfiles ? (
+          <p className="text-sm text-gray-500">Loading members…</p>
+        ) : profiles.length === 0 ? (
+          <p className="text-sm text-gray-500">
+            No profiles found. Add members first.
+          </p>
+        ) : (
+          <div className="max-h-40 overflow-auto border rounded-md p-2 space-y-1 text-sm">
+            {profiles.map((p) => (
+              <label
+                key={p.id}
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedParticipants.includes(p.id)}
+                  onChange={() => toggleParticipant(p.id)}
+                />
+                <span>
+                  {p.full_name}
+                  {p.email ? (
+                    <span className="text-gray-500 text-xs"> – {p.email}</span>
+                  ) : null}
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="flex justify-end gap-2 pt-2">
         <button
           type="button"
           onClick={onCancel}
-          className="btn-ghost text-xs md:text-sm"
+          className="px-3 py-1.5 text-sm border rounded-md hover:bg-gray-50"
+          disabled={saving}
         >
           Cancel
         </button>
         <button
           type="submit"
+          className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-60"
           disabled={saving}
-          className="btn-primary text-xs md:text-sm"
         >
-          {saving ? "Saving..." : existing ? "Save changes" : "Save meeting"}
+          {saving
+            ? existing
+              ? "Saving changes..."
+              : "Creating..."
+            : existing
+            ? "Save changes"
+            : "Create meeting"}
         </button>
       </div>
     </form>
