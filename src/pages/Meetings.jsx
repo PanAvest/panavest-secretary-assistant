@@ -1,3 +1,4 @@
+// src/pages/Meetings.jsx
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { PlusCircle, RefreshCw } from "lucide-react";
@@ -20,17 +21,13 @@ export default function Meetings() {
   async function loadMeetings() {
     if (!user) return;
     setLoading(true);
-    const email = user.email ?? "";
+
     const { data, error } = await supabase
       .from("meetings")
       .select("*")
-      .or(
-        `owner_id.eq.${user.id}${
-          email ? `,participant_emails.ilike.%${email.replace("@", "\@")}%` : ""
-        }`
-      )
       .order("meeting_date", { ascending: true })
       .order("start_time", { ascending: true });
+
     if (error) {
       // eslint-disable-next-line no-alert
       alert("Could not load meetings: " + error.message);
@@ -42,11 +39,10 @@ export default function Meetings() {
 
   async function handleSaveMeeting(payload) {
     if (!user) return;
-    const { attendees, ...rest } = payload;
+
     const insertPayload = {
-      ...rest,
+      ...payload,
       owner_id: user.id,
-      participant_emails: rest.participant_emails || null,
     };
 
     const { data, error } = await supabase
@@ -59,15 +55,6 @@ export default function Meetings() {
       // eslint-disable-next-line no-alert
       alert("Could not save meeting: " + error.message);
       return;
-    }
-
-    if (attendees && attendees.length) {
-      const rows = attendees.map((name) => ({
-        meeting_id: data.id,
-        name,
-      }));
-      await supabase.from("attendees").insert(rows);
-      data.attendees = attendees;
     }
 
     setMeetings((prev) => [...prev, data]);

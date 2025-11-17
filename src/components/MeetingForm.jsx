@@ -1,158 +1,220 @@
-import React, { useState } from "react";
+// src/components/MeetingForm.jsx
+import React, { useEffect, useState } from "react";
+import { supabase } from "../lib/supabaseClient";
 
-const defaultForm = {
-  title: "",
-  meeting_date: "",
-  start_time: "",
-  end_time: "",
-  venue: "",
-  agenda: "",
-  comments: "",
-  attendees_text: "",
-  participant_emails: "",
-};
+export default function MeetingForm({ onSave, onCancel, saving, existing }) {
+  const [title, setTitle] = useState(existing?.title || "");
+  const [meetingDate, setMeetingDate] = useState(existing?.meeting_date || "");
+  const [startTime, setStartTime] = useState(existing?.start_time || "");
+  const [venue, setVenue] = useState(existing?.venue || "");
+  const [agenda, setAgenda] = useState(existing?.agenda || "");
+  const [comments, setComments] = useState(existing?.comments || "");
 
-export default function MeetingForm({ initial, onSave, onCancel, saving }) {
-  const [form, setForm] = useState(initial ? { ...defaultForm, ...initial } : defaultForm);
+  const [profiles, setProfiles] = useState([]);
+  const [profilesLoading, setProfilesLoading] = useState(true);
+  const [selectedEmails, setSelectedEmails] = useState(
+    existing?.participant_emails || []
+  );
+  const [error, setError] = useState("");
 
-  function handleChange(e) {
-    const { name, value } = e.target;
-    setForm((f) => ({ ...f, [name]: value }));
+  useEffect(() => {
+    loadProfiles();
+  }, []);
+
+  async function loadProfiles() {
+    setProfilesLoading(true);
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .order("full_name", { ascending: true });
+
+    if (error) {
+      console.error("Could not load profiles", error);
+    } else {
+      setProfiles(data || []);
+    }
+    setProfilesLoading(false);
+  }
+
+  function toggleEmail(email) {
+    setSelectedEmails((prev) =>
+      prev.includes(email)
+        ? prev.filter((e) => e !== email)
+        : [...prev, email]
+    );
   }
 
   function handleSubmit(e) {
     e.preventDefault();
-    const attendees =
-      form.attendees_text
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean) || [];
-    onSave({ ...form, attendees });
+    setError("");
+
+    if (!title.trim()) {
+      setError("Please enter a title for the meeting.");
+      return;
+    }
+    if (!meetingDate) {
+      setError("Please select a date.");
+      return;
+    }
+
+    const payload = {
+      title: title.trim(),
+      meeting_date: meetingDate,
+      start_time: startTime || null,
+      venue: venue?.trim() || null,
+      agenda: agenda?.trim() || null,
+      comments: comments?.trim() || null,
+      participant_emails: selectedEmails,
+    };
+
+    onSave && onSave(payload);
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">Title</label>
+    <form onSubmit={handleSubmit} className="space-y-4 text-sm">
+      <div className="grid md:grid-cols-2 gap-3">
+        <div className="md:col-span-2">
+          <label className="block text-xs font-medium text-slate-600 mb-1.5">
+            Meeting title
+          </label>
           <input
-            name="title"
-            value={form.title}
-            onChange={handleChange}
-            required
             className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40"
-            placeholder="Boardroom Governance sync with Prof"
+            placeholder="Board review with Prof"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
           />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Date</label>
-            <input
-              type="date"
-              name="meeting_date"
-              value={form.meeting_date}
-              onChange={handleChange}
-              required
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Start time</label>
-            <input
-              type="time"
-              name="start_time"
-              value={form.start_time}
-              onChange={handleChange}
-              required
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40"
-            />
-          </div>
-        </div>
+
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">End time</label>
+          <label className="block text-xs font-medium text-slate-600 mb-1.5">
+            Date
+          </label>
+          <input
+            type="date"
+            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40"
+            value={meetingDate}
+            onChange={(e) => setMeetingDate(e.target.value)}
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1.5">
+            Start time
+          </label>
           <input
             type="time"
-            name="end_time"
-            value={form.end_time}
-            onChange={handleChange}
             className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40"
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
           />
         </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">Venue</label>
+
+        <div className="md:col-span-2">
+          <label className="block text-xs font-medium text-slate-600 mb-1.5">
+            Venue
+          </label>
           <input
-            name="venue"
-            value={form.venue}
-            onChange={handleChange}
             className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40"
-            placeholder="PanAvest Office, East Legon / Zoom"
-          />
-        </div>
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">Agenda / Purpose</label>
-          <textarea
-            name="agenda"
-            value={form.agenda}
-            onChange={handleChange}
-            rows={3}
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40"
-            placeholder="Discuss KDS launch timeline, tasks and responsibilities."
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">Comments / Notes (quick)</label>
-          <textarea
-            name="comments"
-            value={form.comments}
-            onChange={handleChange}
-            rows={3}
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40"
-            placeholder="Key points or reminders for the secretary."
+            placeholder="PanAvest Office / Zoom / Teams"
+            value={venue}
+            onChange={(e) => setVenue(e.target.value)}
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-slate-600 mb-1">
-          With whom (names, comma separated)
+        <label className="block text-xs font-medium text-slate-600 mb-1.5">
+          Agenda / purpose
         </label>
-        <input
-          name="attendees_text"
-          value={form.attendees_text}
-          onChange={handleChange}
+        <textarea
+          rows={3}
           className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40"
-          placeholder="Prof Douglas, Kennedy, Najat..."
+          placeholder="Key discussion points, decisions needed, documents to review..."
+          value={agenda}
+          onChange={(e) => setAgenda(e.target.value)}
         />
-        <p className="text-[11px] text-slate-500 mt-1">
-          Names only for quick reference. Detailed contacts can be managed on the Contacts page.
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-slate-600 mb-1.5">
+          Participants on the platform
+        </label>
+        <div className="border border-slate-200 rounded-xl p-3 max-h-40 overflow-auto bg-slate-50/60">
+          {profilesLoading ? (
+            <div className="text-xs text-slate-500">Loading users...</div>
+          ) : profiles.length === 0 ? (
+            <div className="text-xs text-slate-500">
+              No other users yet. Once more people sign up, you can tag them
+              here so meetings appear on their dashboards.
+            </div>
+          ) : (
+            <ul className="space-y-1">
+              {profiles.map((p) => {
+                const email = (p.email || "").toLowerCase();
+                const checked = selectedEmails.includes(email);
+                return (
+                  <li key={p.id}>
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="rounded border-slate-300"
+                        checked={checked}
+                        onChange={() => toggleEmail(email)}
+                      />
+                      <span className="font-medium text-slate-800">
+                        {p.full_name || email}
+                      </span>
+                      {p.full_name && (
+                        <span className="text-[11px] text-slate-500">
+                          ({email})
+                        </span>
+                      )}
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+        <p className="text-[11px] text-slate-400 mt-1">
+          Anyone you tick here will see this meeting on their dashboard when
+          they sign in with that email.
         </p>
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-slate-600 mb-1">
-          Internal participants emails (optional)
+        <label className="block text-xs font-medium text-slate-600 mb-1.5">
+          Comments / notes (optional)
         </label>
-        <input
-          name="participant_emails"
-          value={form.participant_emails}
-          onChange={handleChange}
+        <textarea
+          rows={2}
           className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40"
-          placeholder="prof@example.com, secretary@example.com"
+          placeholder="Log key outcomes, follow-ups or internal notes."
+          value={comments}
+          onChange={(e) => setComments(e.target.value)}
         />
-        <p className="text-[11px] text-slate-500 mt-1">
-          If any of these emails belong to users with accounts, the meeting will also show on their dashboard.
-        </p>
       </div>
+
+      {error && (
+        <div className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
+          {error}
+        </div>
+      )}
 
       <div className="flex justify-end gap-2 pt-2">
-        <button type="button" onClick={onCancel} className="btn-ghost">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="btn-ghost text-xs md:text-sm"
+        >
           Cancel
         </button>
-        <button type="submit" disabled={saving} className="btn-primary">
-          {saving ? "Saving..." : "Save meeting"}
+        <button
+          type="submit"
+          disabled={saving}
+          className="btn-primary text-xs md:text-sm"
+        >
+          {saving ? "Saving..." : existing ? "Save changes" : "Save meeting"}
         </button>
       </div>
     </form>
