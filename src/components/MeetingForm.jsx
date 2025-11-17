@@ -1,20 +1,23 @@
 // src/components/MeetingForm.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 export default function MeetingForm({ onSave, onCancel, saving, existing }) {
   const [title, setTitle] = useState("");
   const [meetingDate, setMeetingDate] = useState("");
   const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [venue, setVenue] = useState("");
   const [agenda, setAgenda] = useState("");
   const [comments, setComments] = useState("");
-  const [selectedParticipants, setSelectedParticipants] = useState([]);
+  const [status, setStatus] = useState("scheduled");
+  const [attendeesText, setAttendeesText] = useState("");
+  const [selectedEmails, setSelectedEmails] = useState([]);
 
   const [profiles, setProfiles] = useState([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
 
-  // Load profiles once
+  // Load profiles (for attendee selection)
   useEffect(() => {
     let isMounted = true;
 
@@ -42,32 +45,52 @@ export default function MeetingForm({ onSave, onCancel, saving, existing }) {
     };
   }, []);
 
-  // Populate form when editing OR clear when creating new
+  // When editing, populate fields from existing meeting
   useEffect(() => {
     if (existing) {
       setTitle(existing.title || "");
       setMeetingDate(existing.meeting_date || "");
       setStartTime(existing.start_time || "");
+      setEndTime(existing.end_time || "");
       setVenue(existing.venue || "");
       setAgenda(existing.agenda || "");
       setComments(existing.comments || "");
-      setSelectedParticipants(existing.participants || []);
+      setStatus(existing.status || "scheduled");
+      setAttendeesText(existing.attendees_text || "");
+      setSelectedEmails(existing.participant_emails || []);
     } else {
       setTitle("");
       setMeetingDate("");
       setStartTime("");
+      setEndTime("");
       setVenue("");
       setAgenda("");
       setComments("");
-      setSelectedParticipants([]);
+      setStatus("scheduled");
+      setAttendeesText("");
+      setSelectedEmails([]);
     }
   }, [existing]);
 
-  function toggleParticipant(id) {
-    setSelectedParticipants((prev) =>
-      prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
+  function toggleEmail(email) {
+    setSelectedEmails((prev) =>
+      prev.includes(email)
+        ? prev.filter((e) => e !== email)
+        : [...prev, email]
     );
   }
+
+  // If attendeesText is empty, we can auto-generate from selected profiles
+  const computedAttendeesText = useMemo(() => {
+    if (attendeesText && attendeesText.trim().length > 0) {
+      return attendeesText.trim();
+    }
+    if (!profiles.length || !selectedEmails.length) return "";
+    const names = profiles
+      .filter((p) => p.email && selectedEmails.includes(p.email))
+      .map((p) => p.full_name || p.email);
+    return names.join(", ");
+  }, [attendeesText, profiles, selectedEmails]);
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -75,10 +98,13 @@ export default function MeetingForm({ onSave, onCancel, saving, existing }) {
       title,
       meeting_date: meetingDate,
       start_time: startTime,
+      end_time: endTime || null,
       venue,
       agenda,
       comments,
-      participants: selectedParticipants,
+      status,
+      attendees_text: computedAttendeesText || null,
+      participant_emails: selectedEmails,
     });
   }
 
@@ -129,6 +155,16 @@ export default function MeetingForm({ onSave, onCancel, saving, existing }) {
         </div>
 
         <div>
+          <label className="block text-sm font-medium mb-1">End Time</label>
+          <input
+            type="time"
+            className="w-full border rounded-md px-3 py-2 text-sm"
+            value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
+          />
+        </div>
+
+        <div>
           <label className="block text-sm font-medium mb-1">Venue</label>
           <input
             type="text"
@@ -137,6 +173,19 @@ export default function MeetingForm({ onSave, onCancel, saving, existing }) {
             onChange={(e) => setVenue(e.target.value)}
             placeholder="Boardroom, Online (Zoom), etc."
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Status</label>
+          <select
+            className="w-full border rounded-md px-3 py-2 text-sm"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+          >
+            <option value="scheduled">Scheduled</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
         </div>
       </div>
 
@@ -163,7 +212,9 @@ export default function MeetingForm({ onSave, onCancel, saving, existing }) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Participants</label>
+        <label className="block text-sm font-medium mb-1">
+          Attendees (select from list)
+        </label>
         {loadingProfiles ? (
           <p className="text-sm text-gray-500">Loading members…</p>
         ) : profiles.length === 0 ? (
@@ -179,19 +230,47 @@ export default function MeetingForm({ onSave, onCancel, saving, existing }) {
               >
                 <input
                   type="checkbox"
-                  checked={selectedParticipants.includes(p.id)}
-                  onChange={() => toggleParticipant(p.id)}
+                  checked={
+                    p.email ? selectedEmails.includes(p.email) : false
+                  }
+                  onChange={() => p.email && toggleEmail(p.email)}
+                  disabled={!p.email}
                 />
                 <span>
-                  {p.full_name}
-                  {p.email ? (
-                    <span className="text-gray-500 text-xs"> – {p.email}</span>
-                  ) : null}
+                  {p.full_name || p.email}
+                  {p.email && (
+                    <span className="text-gray-500 text-xs">
+                      {" "}
+                      – {p.email}
+                    </span>
+                  )}
+                  {!p.email && (
+                    <span className="text-red-400 text-[10px] ml-1">
+                      (no email)
+                    </span>
+                  )}
                 </span>
               </label>
             ))}
           </div>
         )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">
+          Attendees note (optional)
+        </label>
+        <textarea
+          className="w-full border rounded-md px-3 py-2 text-sm"
+          rows={2}
+          value={attendeesText}
+          onChange={(e) => setAttendeesText(e.target.value)}
+          placeholder="Eg. Prof Boateng, Board Members, Finance Team..."
+        />
+        <p className="text-[11px] text-gray-500 mt-1">
+          If left empty, this will auto-fill based on the attendees you tick
+          above.
+        </p>
       </div>
 
       <div className="flex justify-end gap-2 pt-2">

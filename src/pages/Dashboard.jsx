@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { PlusCircle } from "lucide-react";
 import MeetingForm from "../components/MeetingForm";
-import MeetingList from "../components/MeetingList";
 import { useAuth } from "../lib/AuthContext";
 import { notifyMeetingParticipants } from "../lib/oneSignalClient";
 
@@ -22,14 +21,12 @@ export default function Dashboard() {
 
       const todayStr = new Date().toISOString().slice(0, 10);
 
-      // Meetings: rely on RLS (owner or invited) + filter by today's date
       const meetingsQuery = supabase
         .from("meetings")
         .select("*")
         .eq("meeting_date", todayStr)
         .order("start_time", { ascending: true });
 
-      // Tasks: owned by this user & still pending
       const tasksQuery = supabase
         .from("tasks")
         .select("*")
@@ -41,7 +38,6 @@ export default function Dashboard() {
         await Promise.all([meetingsQuery, tasksQuery]);
 
       if (mErr) {
-        // eslint-disable-next-line no-alert
         alert("Could not load today's meetings: " + mErr.message);
         setTodayMeetings([]);
       } else {
@@ -49,7 +45,6 @@ export default function Dashboard() {
       }
 
       if (tErr) {
-        // eslint-disable-next-line no-alert
         alert("Could not load tasks: " + tErr.message);
         setTasks([]);
       } else {
@@ -62,11 +57,20 @@ export default function Dashboard() {
     load();
   }, [user]);
 
-  async function handleSaveMeeting(payload) {
+  async function handleSaveMeeting(formValues) {
     if (!user) return;
 
     const insertPayload = {
-      ...payload,
+      title: formValues.title,
+      meeting_date: formValues.meeting_date,
+      start_time: formValues.start_time,
+      end_time: formValues.end_time || null,
+      venue: formValues.venue || null,
+      agenda: formValues.agenda || null,
+      comments: formValues.comments || null,
+      status: formValues.status || "scheduled",
+      attendees_text: formValues.attendees_text || null,
+      participant_emails: formValues.participant_emails || [],
       owner_id: user.id,
     };
 
@@ -77,13 +81,15 @@ export default function Dashboard() {
       .single();
 
     if (error) {
-      // eslint-disable-next-line no-alert
       alert("Could not save meeting: " + error.message);
       return;
     }
 
-    // 🔔 Notify participants added from the dashboard quick form
-    await notifyMeetingParticipants(data);
+    try {
+      await notifyMeetingParticipants(data);
+    } catch (err) {
+      console.error("notifyMeetingParticipants error:", err);
+    }
 
     setTodayMeetings((prev) => [...prev, data]);
     setShowForm(false);
@@ -129,10 +135,48 @@ export default function Dashboard() {
               </p>
             </div>
           </div>
+
           {loading ? (
             <div className="py-6 text-sm text-slate-500">Loading...</div>
+          ) : todayMeetings.length === 0 ? (
+            <div className="py-6 text-xs text-slate-500">
+              No meetings scheduled for today.
+            </div>
           ) : (
-            <MeetingList items={todayMeetings} />
+            <div className="space-y-2 max-h-72 overflow-auto">
+              {todayMeetings.map((m) => (
+                <div
+                  key={m.id}
+                  className="border border-slate-100 rounded-md px-3 py-2 flex flex-col gap-1 bg-white"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-xs font-medium text-slate-900">
+                      {m.title}
+                    </div>
+                    {m.start_time && (
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-panablue/5 text-panablue">
+                        {m.start_time}
+                      </span>
+                    )}
+                  </div>
+                  {m.venue && (
+                    <div className="text-[11px] text-slate-500">
+                      Venue: {m.venue}
+                    </div>
+                  )}
+                  {m.agenda && (
+                    <div className="text-[11px] text-slate-600 line-clamp-2">
+                      {m.agenda}
+                    </div>
+                  )}
+                  {m.attendees_text && (
+                    <div className="text-[11px] text-slate-500">
+                      Attendees: {m.attendees_text}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
@@ -147,7 +191,7 @@ export default function Dashboard() {
             </p>
             {loading ? (
               <div className="py-4 text-xs text-slate-500">Loading...</div>
-            ) : !tasks.length ? (
+            ) : tasks.length === 0 ? (
               <div className="py-4 text-xs text-slate-500">
                 No pending tasks. You&apos;re up to date 🎉
               </div>

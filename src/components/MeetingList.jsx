@@ -8,7 +8,6 @@ export default function MeetingList({
   onEdit,
   onDelete,
 }) {
-  // Normalise to an array so .length and .map are always safe
   const items = Array.isArray(meetings) ? meetings : [];
 
   if (loading) {
@@ -39,6 +38,11 @@ export default function MeetingList({
                   {m.meeting_date} {m.start_time ? `• ${m.start_time}` : ""}
                 </span>
               )}
+              {m.status && (
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                  {m.status}
+                </span>
+              )}
             </div>
 
             {m.venue && (
@@ -51,11 +55,19 @@ export default function MeetingList({
               </p>
             )}
 
-            {Array.isArray(m.participants) && m.participants.length > 0 && (
+            {m.attendees_text && (
               <p className="text-[11px] text-gray-500 mt-1">
-                Participants: {m.participants.length}
+                Attendees: {m.attendees_text}
               </p>
             )}
+
+            {Array.isArray(m.participant_emails) &&
+              m.participant_emails.length > 0 && (
+                <p className="text-[11px] text-gray-500 mt-1">
+                  Notified: {m.participant_emails.length} participant
+                  {m.participant_emails.length > 1 ? "s" : ""}
+                </p>
+              )}
           </div>
 
           {(onEdit || onDelete) && (

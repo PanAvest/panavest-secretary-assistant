@@ -74,23 +74,22 @@ export default function Meetings() {
     if (!user) return;
     setSaving(true);
 
-    // Only include columns that actually exist in your `meetings` table.
-    // owner_id is what the Dashboard uses, so we keep that.
     const payload = {
       title: formValues.title,
       meeting_date: formValues.meeting_date,
       start_time: formValues.start_time,
-      venue: formValues.venue,
-      agenda: formValues.agenda,
-      comments: formValues.comments,
-      participants: formValues.participants || [], // if you have this column
+      end_time: formValues.end_time || null,
+      venue: formValues.venue || null,
+      agenda: formValues.agenda || null,
+      comments: formValues.comments || null,
+      status: formValues.status || "scheduled",
+      attendees_text: formValues.attendees_text || null,
+      participant_emails: formValues.participant_emails || [],
       owner_id: user.id,
-      // ❌ NO created_by / updated_by here – those columns do not exist
     };
 
     try {
       if (editingMeeting) {
-        // UPDATE existing meeting
         const { data, error } = await supabase
           .from("meetings")
           .update(payload)
@@ -106,7 +105,6 @@ export default function Meetings() {
             prev.map((m) => (m.id === data.id ? data : m))
           );
 
-          // Optional: notify again if details changed
           try {
             await notifyMeetingParticipants(data);
           } catch (notifyErr) {
@@ -117,7 +115,6 @@ export default function Meetings() {
           setEditingMeeting(null);
         }
       } else {
-        // CREATE new meeting
         const { data, error } = await supabase
           .from("meetings")
           .insert([payload])
@@ -128,7 +125,6 @@ export default function Meetings() {
           console.error("Error creating meeting:", error);
           alert("Could not create meeting. Please try again.");
         } else {
-          // Prepend new meeting into the list
           setMeetings((prev) => [data, ...prev]);
 
           try {
