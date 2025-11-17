@@ -1,0 +1,34 @@
+tree -I "node_modules" -L 4
+
+.
+├── README.md
+├── index.html
+├── package-lock.json
+├── package.json
+├── postcss.config.cjs
+├── src
+│   ├── App.jsx
+│   ├── assets
+│   │   └── panavest-logo.png
+│   ├── components
+│   │   ├── Layout.jsx
+│   │   ├── MeetingForm.jsx
+│   │   ├── MeetingList.jsx
+│   │   ├── Sidebar.jsx
+│   │   └── TopBar.jsx
+│   ├── index.css
+│   ├── lib
+│   │   ├── AuthContext.jsx
+│   │   ├── oneSignalClient.js
+│   │   └── supabaseClient.js
+│   ├── main.jsx
+│   └── pages
+│       ├── Contacts.jsx
+│       ├── Dashboard.jsx
+│       ├── Meetings.jsx
+│       ├── SignIn.jsx
+│       ├── SignUp.jsx
+│       └── Tasks.jsx
+├── tailwind.config.cjs
+├── vercel.json
+└── vite.config.mts
