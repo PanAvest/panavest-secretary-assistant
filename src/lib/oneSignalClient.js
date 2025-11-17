@@ -1,24 +1,26 @@
 // src/lib/oneSignalClient.js
 import OneSignal from "react-onesignal";
 
-// Track init state + promise to avoid double init
 let initialized = false;
 let initPromise = null;
 
 /**
  * Initialize OneSignal once for the app.
+ * Very defensive: never throws, never crashes your UI.
  */
 export async function initOneSignal() {
-  // If we've already initialised, just return.
+  // Don't run on server during build / SSR
+  if (typeof window === "undefined") return;
+
+  // Already initialised in this session
   if (initialized) return;
 
-  // If an init is already in progress (React StrictMode double-mount, etc),
-  // return the same promise instead of starting a new one.
+  // Init already in progress (StrictMode double-mount, etc.)
   if (initPromise) return initPromise;
 
   const appId = import.meta.env.VITE_ONESIGNAL_APP_ID;
   if (!appId) {
-    console.warn("VITE_ONESIGNAL_APP_ID is not set");
+    console.warn("[OneSignal] VITE_ONESIGNAL_APP_ID is not set. Skipping init.");
     return;
   }
 
@@ -32,18 +34,19 @@ export async function initOneSignal() {
         },
       });
       initialized = true;
-      // console.log("OneSignal initialised");
+      // console.log("[OneSignal] SDK initialised");
     } catch (err) {
-      const msg = err?.message || String(err);
+      const msg = (err && (err.message || String(err))) || "";
 
-      // If SDK says "already initialised", treat that as success
-      if (msg.includes("SDK already initialized")) {
+      // If the SDK says it's already initialised, just treat as success
+      if (String(err).includes("SDK already initialized") || msg.includes("SDK already initialized")) {
         initialized = true;
-        // console.warn("OneSignal already initialised – ignoring.");
+        // console.warn("[OneSignal] SDK already initialised – ignoring.");
         return;
       }
 
-      console.error("OneSignal init error", err);
+      // For this internal tool we NEVER want OneSignal to break the app
+      console.warn("[OneSignal] init failed (non-fatal):", err);
     }
   })();
 
@@ -51,44 +54,38 @@ export async function initOneSignal() {
 }
 
 /**
- * Link the current logged-in user to OneSignal using their email
- * as the external user ID.
+ * Link the current logged-in user to OneSignal.
+ *
+ * For now we **disable** actual login to avoid the
+ * `OneSignal.Z.tt` / internal SDK crashes.
+ * Your notifications still work via REST + email.
  */
-export async function identifyUser(email) {
-  if (!email) return;
-
-  // Make sure OneSignal is initialised first
-  await initOneSignal();
-
-  if (!initialized) {
-    // If init failed or appId not set, just bail silently
-    return;
-  }
-
-  try {
-    await OneSignal.login(email.toLowerCase());
-    // console.log("OneSignal identifyUser:", email.toLowerCase());
-  } catch (err) {
-    console.error("OneSignal identifyUser error", err);
-  }
+export async function identifyUser(_email) {
+  // Temporarily no-op to keep the app stable.
+  // If later you want to re-enable:
+  //  - await initOneSignal();
+  //  - await OneSignal.login(email.toLowerCase());
+  return;
 }
 
 /**
  * Send a notification to all participant_emails on a meeting record.
- * NOTE: uses REST API key on the client for now (okay for internal tool),
- * but later we can move this to a Supabase Edge Function for more security.
+ * Uses REST API key (okay for internal tool), but later we can
+ * move this to a Supabase Edge Function for more security.
  */
 export async function notifyMeetingParticipants(meeting) {
   const appId = import.meta.env.VITE_ONESIGNAL_APP_ID;
   const restKey = import.meta.env.VITE_ONESIGNAL_REST_API_KEY;
 
   if (!appId || !restKey) {
-    console.warn("OneSignal appId or REST API key missing");
+    console.warn("[OneSignal] appId or REST API key missing – cannot notify.");
     return;
   }
 
-  const emails = meeting?.participant_emails || [];
-  if (!Array.isArray(emails) || !emails.length) return;
+  if (!meeting) return;
+
+  const emails = meeting.participant_emails || [];
+  if (!Array.isArray(emails) || emails.length === 0) return;
 
   const title = meeting.title || "New meeting";
   const date = meeting.meeting_date || "";
@@ -124,9 +121,10 @@ export async function notifyMeetingParticipants(meeting) {
       }),
     });
   } catch (err) {
-    console.error("Failed to send OneSignal notification", err);
+    console.error("[OneSignal] Failed to send notification", err);
   }
 }
 
-// Re-export if you need direct access somewhere
+// Don't export OneSignal directly anywhere else.
+// Keep all access through this module.
 export { OneSignal };
