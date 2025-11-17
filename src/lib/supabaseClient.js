@@ -1,11 +1,14 @@
+// src/lib/supabaseClient.js
 import { createClient } from "@supabase/supabase-js";
 
-const url = import.meta.env.VITE_SUPABASE_URL;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!url || !anonKey) {
-  // eslint-disable-next-line no-console
-  console.warn("Supabase URL or anon key is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env.");
+if (!supabaseUrl) {
+  console.error("VITE_SUPABASE_URL is missing");
+}
+if (!supabaseAnonKey) {
+  console.error("VITE_SUPABASE_ANON_KEY is missing");
 }
 
-export const supabase = createClient(url, anonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);

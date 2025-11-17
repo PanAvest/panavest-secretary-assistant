@@ -1,6 +1,8 @@
+// src/components/Sidebar.jsx
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { CalendarDays, ClipboardList, Home, Users } from "lucide-react";
+import logo from "../assets/panavest-logo.png"; // <-- add this
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: Home },
@@ -13,14 +15,19 @@ export default function Sidebar() {
   return (
     <aside className="hidden md:flex md:flex-col w-64 bg-white border-r border-slate-100 shadow-soft/40">
       <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-3">
-        <div className="h-9 w-9 rounded-xl bg-panablue text-white flex items-center justify-center text-sm font-semibold">
-          PA
+        <div className="h-10 w-10 rounded-2xl bg-soft flex items-center justify-center overflow-hidden">
+          <img
+            src={logo}
+            alt="PanAvest logo"
+            className="h-9 w-auto object-contain"
+          />
         </div>
         <div>
           <div className="text-sm font-semibold text-panablue">PanAvest</div>
           <div className="text-xs text-slate-500">Secretary Assistant</div>
         </div>
       </div>
+
       <nav className="flex-1 px-3 py-4 space-y-1">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -43,6 +50,7 @@ export default function Sidebar() {
           );
         })}
       </nav>
+
       <div className="px-4 pb-4 mt-auto">
         <div className="card px-3 py-3 text-xs text-slate-500">
           <div className="font-semibold text-slate-700 mb-1">Tip</div>
