@@ -74,6 +74,8 @@ export default function Meetings() {
     if (!user) return;
     setSaving(true);
 
+    // Only include columns that actually exist in your `meetings` table.
+    // owner_id is what the Dashboard uses, so we keep that.
     const payload = {
       title: formValues.title,
       meeting_date: formValues.meeting_date,
@@ -81,8 +83,9 @@ export default function Meetings() {
       venue: formValues.venue,
       agenda: formValues.agenda,
       comments: formValues.comments,
-      participants: formValues.participants || [],
-      updated_by: user.id,
+      participants: formValues.participants || [], // if you have this column
+      owner_id: user.id,
+      // ❌ NO created_by / updated_by here – those columns do not exist
     };
 
     try {
@@ -99,18 +102,15 @@ export default function Meetings() {
           console.error("Error updating meeting:", error);
           alert("Could not update meeting. Please try again.");
         } else {
-          // Update local list
           setMeetings((prev) =>
             prev.map((m) => (m.id === data.id ? data : m))
           );
 
-          // Optional: re-notify participants when details change
-          if (data.participants && data.participants.length > 0) {
-            try {
-              await notifyMeetingParticipants(data);
-            } catch (notifyErr) {
-              console.error("Error notifying participants:", notifyErr);
-            }
+          // Optional: notify again if details changed
+          try {
+            await notifyMeetingParticipants(data);
+          } catch (notifyErr) {
+            console.error("Error notifying participants:", notifyErr);
           }
 
           setShowForm(false);
@@ -120,12 +120,7 @@ export default function Meetings() {
         // CREATE new meeting
         const { data, error } = await supabase
           .from("meetings")
-          .insert([
-            {
-              ...payload,
-              created_by: user.id,
-            },
-          ])
+          .insert([payload])
           .select()
           .single();
 
@@ -133,15 +128,13 @@ export default function Meetings() {
           console.error("Error creating meeting:", error);
           alert("Could not create meeting. Please try again.");
         } else {
-          // Prepend new meeting
+          // Prepend new meeting into the list
           setMeetings((prev) => [data, ...prev]);
 
-          if (data.participants && data.participants.length > 0) {
-            try {
-              await notifyMeetingParticipants(data);
-            } catch (notifyErr) {
-              console.error("Error notifying participants:", notifyErr);
-            }
+          try {
+            await notifyMeetingParticipants(data);
+          } catch (notifyErr) {
+            console.error("Error notifying participants:", notifyErr);
           }
 
           setShowForm(false);
