@@ -2,12 +2,20 @@
 import React from "react";
 import { Pencil, Trash2 } from "lucide-react";
 
-export default function MeetingList({ meetings, loading, onEdit, onDelete }) {
+export default function MeetingList({
+  meetings,
+  loading = false,
+  onEdit,
+  onDelete,
+}) {
+  // Normalise to an array so .length and .map are always safe
+  const items = Array.isArray(meetings) ? meetings : [];
+
   if (loading) {
     return <p className="text-sm text-gray-500">Loading meetings…</p>;
   }
 
-  if (!loading && meetings.length === 0) {
+  if (items.length === 0) {
     return (
       <p className="text-sm text-gray-500">
         No meetings scheduled yet. Click <strong>New Meeting</strong> to create
@@ -18,7 +26,7 @@ export default function MeetingList({ meetings, loading, onEdit, onDelete }) {
 
   return (
     <div className="space-y-3">
-      {meetings.map((m) => (
+      {items.map((m) => (
         <div
           key={m.id}
           className="border rounded-lg p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2 bg-white"
@@ -50,22 +58,28 @@ export default function MeetingList({ meetings, loading, onEdit, onDelete }) {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => onEdit(m)}
-              className="inline-flex items-center gap-1 px-2 py-1 text-xs border rounded-md hover:bg-gray-50"
-            >
-              <Pencil size={14} />
-              Edit
-            </button>
-            <button
-              onClick={() => onDelete(m.id)}
-              className="inline-flex items-center gap-1 px-2 py-1 text-xs border border-red-200 text-red-600 rounded-md hover:bg-red-50"
-            >
-              <Trash2 size={14} />
-              Delete
-            </button>
-          </div>
+          {(onEdit || onDelete) && (
+            <div className="flex items-center gap-2">
+              {onEdit && (
+                <button
+                  onClick={() => onEdit(m)}
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs border rounded-md hover:bg-gray-50"
+                >
+                  <Pencil size={14} />
+                  Edit
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  onClick={() => onDelete(m.id)}
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs border border-red-200 text-red-600 rounded-md hover:bg-red-50"
+                >
+                  <Trash2 size={14} />
+                  Delete
+                </button>
+              )}
+            </div>
+          )}
         </div>
       ))}
     </div>

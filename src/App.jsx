@@ -10,6 +10,7 @@ import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import { AuthProvider, useAuth } from "./lib/AuthContext";
 import { initOneSignal } from "./lib/oneSignalClient";
+import AppErrorBoundary from "./components/AppErrorBoundary";
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
@@ -31,7 +32,6 @@ function RequireAuth({ children }) {
 
 function AppShell() {
   useEffect(() => {
-    // Initialise OneSignal once when the app shell mounts
     initOneSignal();
   }, []);
 
@@ -65,7 +65,9 @@ function AppShell() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppShell />
+      <AppErrorBoundary>
+        <AppShell />
+      </AppErrorBoundary>
     </AuthProvider>
   );
 }
