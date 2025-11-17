@@ -3,29 +3,45 @@ import { supabase } from "../lib/supabaseClient";
 import { PlusCircle } from "lucide-react";
 import MeetingForm from "../components/MeetingForm";
 import MeetingList from "../components/MeetingList";
+import { useAuth } from "../lib/AuthContext";
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const [todayMeetings, setTodayMeetings] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
+    if (!user) return;
     const today = new Date().toISOString().slice(0, 10);
 
     async function load() {
       setLoading(true);
+      const email = user.email ?? "";
+      const meetingsQuery = supabase
+        .from("meetings")
+        .select("*")
+        .eq("meeting_date", today)
+        .or(
+          `owner_id.eq.${user.id}${
+            email
+              ? `,participant_emails.ilike.%${email.replace("@", "\@")}%`
+              : ""
+          }`
+        )
+        .order("start_time", { ascending: true });
+
+      const tasksQuery = supabase
+        .from("tasks")
+        .select("*")
+        .eq("owner_id", user.id)
+        .eq("status", "pending")
+        .order("due_date", { ascending: true });
+
       const [{ data: m }, { data: t }] = await Promise.all([
-        supabase
-          .from("meetings")
-          .select("*")
-          .eq("meeting_date", today)
-          .order("start_time", { ascending: true }),
-        supabase
-          .from("tasks")
-          .select("*")
-          .eq("status", "pending")
-          .order("due_date", { ascending: true }),
+        meetingsQuery,
+        tasksQuery,
       ]);
       setTodayMeetings(m || []);
       setTasks(t || []);
@@ -33,13 +49,20 @@ export default function Dashboard() {
     }
 
     load();
-  }, []);
+  }, [user]);
 
   async function handleSaveMeeting(payload) {
+    if (!user) return;
     const { attendees, ...rest } = payload;
+    const insertPayload = {
+      ...rest,
+      owner_id: user.id,
+      participant_emails: rest.participant_emails || null,
+    };
+
     const { data, error } = await supabase
       .from("meetings")
-      .insert(rest)
+      .insert(insertPayload)
       .select()
       .single();
 

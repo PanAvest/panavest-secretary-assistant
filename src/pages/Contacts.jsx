@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { PlusCircle } from "lucide-react";
+import { useAuth } from "../lib/AuthContext";
 
 const defaultForm = {
   name: "",
@@ -12,20 +13,25 @@ const defaultForm = {
 };
 
 export default function Contacts() {
+  const { user } = useAuth();
   const [contacts, setContacts] = useState([]);
   const [form, setForm] = useState(defaultForm);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!user) return;
     loadContacts();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   async function loadContacts() {
+    if (!user) return;
     setLoading(true);
     const { data, error } = await supabase
       .from("contacts")
       .select("*")
+      .eq("owner_id", user.id)
       .order("name", { ascending: true });
     if (error) {
       // eslint-disable-next-line no-alert
@@ -43,10 +49,12 @@ export default function Contacts() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!user) return;
     setSaving(true);
+    const payload = { ...form, owner_id: user.id };
     const { data, error } = await supabase
       .from("contacts")
-      .insert(form)
+      .insert(payload)
       .select()
       .single();
     setSaving(false);

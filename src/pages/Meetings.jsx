@@ -3,21 +3,32 @@ import { supabase } from "../lib/supabaseClient";
 import { PlusCircle, RefreshCw } from "lucide-react";
 import MeetingForm from "../components/MeetingForm";
 import MeetingList from "../components/MeetingList";
+import { useAuth } from "../lib/AuthContext";
 
 export default function Meetings() {
+  const { user } = useAuth();
   const [meetings, setMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
+    if (!user) return;
     loadMeetings();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   async function loadMeetings() {
+    if (!user) return;
     setLoading(true);
+    const email = user.email ?? "";
     const { data, error } = await supabase
       .from("meetings")
       .select("*")
+      .or(
+        `owner_id.eq.${user.id}${
+          email ? `,participant_emails.ilike.%${email.replace("@", "\@")}%` : ""
+        }`
+      )
       .order("meeting_date", { ascending: true })
       .order("start_time", { ascending: true });
     if (error) {
@@ -30,10 +41,17 @@ export default function Meetings() {
   }
 
   async function handleSaveMeeting(payload) {
+    if (!user) return;
     const { attendees, ...rest } = payload;
+    const insertPayload = {
+      ...rest,
+      owner_id: user.id,
+      participant_emails: rest.participant_emails || null,
+    };
+
     const { data, error } = await supabase
       .from("meetings")
-      .insert(rest)
+      .insert(insertPayload)
       .select()
       .single();
 
@@ -57,7 +75,6 @@ export default function Meetings() {
   }
 
   function handleSelectMeeting(m) {
-    // For now just show details in alert; can be replaced by a slide-over later
     const summary = [
       `Title: ${m.title}`,
       `Date & time: ${m.meeting_date} ${m.start_time || ""}`,

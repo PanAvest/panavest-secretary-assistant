@@ -9,6 +9,7 @@ const defaultForm = {
   agenda: "",
   comments: "",
   attendees_text: "",
+  participant_emails: "",
 };
 
 export default function MeetingForm({ initial, onSave, onCancel, saving }) {
@@ -115,7 +116,9 @@ export default function MeetingForm({ initial, onSave, onCancel, saving }) {
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-slate-600 mb-1">With whom (comma separated)</label>
+        <label className="block text-xs font-medium text-slate-600 mb-1">
+          With whom (names, comma separated)
+        </label>
         <input
           name="attendees_text"
           value={form.attendees_text}
@@ -124,7 +127,23 @@ export default function MeetingForm({ initial, onSave, onCancel, saving }) {
           placeholder="Prof Douglas, Kennedy, Najat..."
         />
         <p className="text-[11px] text-slate-500 mt-1">
-          You can type names only. Detailed contacts can be managed on the Contacts page.
+          Names only for quick reference. Detailed contacts can be managed on the Contacts page.
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-slate-600 mb-1">
+          Internal participants emails (optional)
+        </label>
+        <input
+          name="participant_emails"
+          value={form.participant_emails}
+          onChange={handleChange}
+          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40"
+          placeholder="prof@example.com, secretary@example.com"
+        />
+        <p className="text-[11px] text-slate-500 mt-1">
+          If any of these emails belong to users with accounts, the meeting will also show on their dashboard.
         </p>
       </div>
 

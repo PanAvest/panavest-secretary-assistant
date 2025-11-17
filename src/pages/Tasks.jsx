@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { CheckCircle2, Circle, PlusCircle } from "lucide-react";
+import { useAuth } from "../lib/AuthContext";
 
 const defaultForm = {
   title: "",
@@ -10,20 +11,25 @@ const defaultForm = {
 };
 
 export default function Tasks() {
+  const { user } = useAuth();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(defaultForm);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (!user) return;
     loadTasks();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   async function loadTasks() {
+    if (!user) return;
     setLoading(true);
     const { data, error } = await supabase
       .from("tasks")
       .select("*")
+      .eq("owner_id", user.id)
       .order("status", { ascending: true })
       .order("due_date", { ascending: true });
     if (error) {
@@ -42,10 +48,12 @@ export default function Tasks() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!user) return;
     setSaving(true);
+    const payload = { ...form, owner_id: user.id };
     const { data, error } = await supabase
       .from("tasks")
-      .insert(form)
+      .insert(payload)
       .select()
       .single();
     setSaving(false);
