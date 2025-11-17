@@ -4,7 +4,10 @@ import OneSignal from "react-onesignal";
 let initialized = false;
 
 export async function initOneSignal() {
+  // Don't run on server or in non-browser environments
+  if (typeof window === "undefined") return;
   if (initialized) return;
+
   const appId = import.meta.env.VITE_ONESIGNAL_APP_ID;
   if (!appId) {
     console.warn("VITE_ONESIGNAL_APP_ID is not set");
@@ -21,7 +24,8 @@ export async function initOneSignal() {
     });
     initialized = true;
   } catch (err) {
-    console.error("OneSignal init error", err);
+    // Only log a simple warning so it doesn't break the app
+    console.warn("OneSignal init error (non-blocking)", err);
   }
 }
 
