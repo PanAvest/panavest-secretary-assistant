@@ -1,3 +1,4 @@
+// src/pages/Dashboard.jsx
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { PlusCircle } from "lucide-react";
@@ -14,24 +15,20 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!user) return;
-    const today = new Date().toISOString().slice(0, 10);
 
     async function load() {
       setLoading(true);
-      const email = user.email ?? "";
+
+      const todayStr = new Date().toISOString().slice(0, 10);
+
+      // Meetings: rely on RLS (owner or invited) + filter by today's date
       const meetingsQuery = supabase
         .from("meetings")
         .select("*")
-        .eq("meeting_date", today)
-        .or(
-          `owner_id.eq.${user.id}${
-            email
-              ? `,participant_emails.ilike.%${email.replace("@", "\@")}%`
-              : ""
-          }`
-        )
+        .eq("meeting_date", todayStr)
         .order("start_time", { ascending: true });
 
+      // Tasks: owned by this user & still pending
       const tasksQuery = supabase
         .from("tasks")
         .select("*")
@@ -39,12 +36,25 @@ export default function Dashboard() {
         .eq("status", "pending")
         .order("due_date", { ascending: true });
 
-      const [{ data: m }, { data: t }] = await Promise.all([
-        meetingsQuery,
-        tasksQuery,
-      ]);
-      setTodayMeetings(m || []);
-      setTasks(t || []);
+      const [{ data: m, error: mErr }, { data: t, error: tErr }] =
+        await Promise.all([meetingsQuery, tasksQuery]);
+
+      if (mErr) {
+        // eslint-disable-next-line no-alert
+        alert("Could not load today's meetings: " + mErr.message);
+        setTodayMeetings([]);
+      } else {
+        setTodayMeetings(m || []);
+      }
+
+      if (tErr) {
+        // eslint-disable-next-line no-alert
+        alert("Could not load tasks: " + tErr.message);
+        setTasks([]);
+      } else {
+        setTasks(t || []);
+      }
+
       setLoading(false);
     }
 
@@ -53,11 +63,10 @@ export default function Dashboard() {
 
   async function handleSaveMeeting(payload) {
     if (!user) return;
-    const { attendees, ...rest } = payload;
+
     const insertPayload = {
-      ...rest,
+      ...payload,
       owner_id: user.id,
-      participant_emails: rest.participant_emails || null,
     };
 
     const { data, error } = await supabase
@@ -70,15 +79,6 @@ export default function Dashboard() {
       // eslint-disable-next-line no-alert
       alert("Could not save meeting: " + error.message);
       return;
-    }
-
-    if (attendees && attendees.length) {
-      const rows = attendees.map((name) => ({
-        meeting_id: data.id,
-        name,
-      }));
-      await supabase.from("attendees").insert(rows);
-      data.attendees = attendees;
     }
 
     setTodayMeetings((prev) => [...prev, data]);
@@ -113,6 +113,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid md:grid-cols-5 gap-4">
+        {/* Today’s meetings */}
         <div className="card px-4 py-3 md:col-span-3">
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -131,6 +132,7 @@ export default function Dashboard() {
           )}
         </div>
 
+        {/* Tasks + notes */}
         <div className="space-y-4 md:col-span-2">
           <div className="card px-4 py-3">
             <h2 className="text-sm font-semibold text-slate-800 mb-1">
@@ -148,7 +150,10 @@ export default function Dashboard() {
             ) : (
               <ul className="space-y-2 max-h-64 overflow-auto">
                 {tasks.map((t) => (
-                  <li key={t.id} className="flex items-start justify-between gap-2">
+                  <li
+                    key={t.id}
+                    className="flex items-start justify-between gap-2"
+                  >
                     <div>
                       <div className="text-xs font-medium text-slate-800">
                         {t.title}
@@ -173,8 +178,8 @@ export default function Dashboard() {
               Secretary notes
             </h2>
             <p className="text-xs text-slate-500">
-              Use the Meetings page for detailed notes per meeting. This can be extended later with
-              a quick notepad if needed.
+              Use the Meetings page for detailed notes per meeting. This can be
+              extended later with a quick notepad if needed.
             </p>
           </div>
         </div>

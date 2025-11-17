@@ -35,13 +35,16 @@ export default function SignUp() {
       return;
     }
 
-    const user = data.user;
-    if (user) {
-      await supabase.from("profiles").insert({
-        id: user.id,
-        full_name: form.full_name,
-      });
-    }
+    // inside handleSubmit in SignUp.jsx
+const user = data.user;
+if (user) {
+  await supabase.from("profiles").insert({
+    id: user.id,
+    full_name: form.full_name,
+    email: form.email.toLowerCase(),
+  });
+}
+
 
     setLoading(false);
     navigate("/dashboard", { replace: true });

@@ -1,8 +1,11 @@
 // src/components/MeetingForm.jsx
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../lib/AuthContext";
 
 export default function MeetingForm({ onSave, onCancel, saving, existing }) {
+  const { user } = useAuth();
+
   const [title, setTitle] = useState(existing?.title || "");
   const [meetingDate, setMeetingDate] = useState(existing?.meeting_date || "");
   const [startTime, setStartTime] = useState(existing?.start_time || "");
@@ -19,6 +22,7 @@ export default function MeetingForm({ onSave, onCancel, saving, existing }) {
 
   useEffect(() => {
     loadProfiles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadProfiles() {
@@ -30,8 +34,13 @@ export default function MeetingForm({ onSave, onCancel, saving, existing }) {
 
     if (error) {
       console.error("Could not load profiles", error);
+      setProfiles([]);
     } else {
-      setProfiles(data || []);
+      const currentEmail = user?.email?.toLowerCase() ?? "";
+      const others = (data || []).filter(
+        (p) => (p.email || "").toLowerCase() !== currentEmail
+      );
+      setProfiles(others);
     }
     setProfilesLoading(false);
   }
