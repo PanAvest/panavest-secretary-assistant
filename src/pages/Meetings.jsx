@@ -14,7 +14,7 @@ export default function Meetings() {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // null = creating new, object = editing existing
+  // null = new meeting, object = editing existing one
   const [editingMeeting, setEditingMeeting] = useState(null);
 
   useEffect(() => {
@@ -34,6 +34,7 @@ export default function Meetings() {
       .order("start_time", { ascending: true });
 
     if (error) {
+      console.error(error);
       // eslint-disable-next-line no-alert
       alert("Could not load meetings: " + error.message);
     } else {
@@ -47,59 +48,45 @@ export default function Meetings() {
     setSaving(true);
 
     try {
-      // ✏️ UPDATE existing meeting
-      if (editingMeeting) {
-        const updatePayload = {
-          ...payload,
-          owner_id: editingMeeting.owner_id || user.id,
-        };
-
-        const { data, error } = await supabase
-          .from("meetings")
-          .update(updatePayload)
-          .eq("id", editingMeeting.id)
-          .select()
-          .single();
-
-        if (error) {
-          // eslint-disable-next-line no-alert
-          alert("Could not update meeting: " + error.message);
-          return;
-        }
-
-        // Optional: notify participants about changes
-        await notifyMeetingParticipants(data);
-
-        setMeetings((prev) =>
-          prev.map((m) => (m.id === data.id ? data : m))
-        );
-        setEditingMeeting(null);
-        setShowForm(false);
-        return;
-      }
-
-      // ➕ CREATE new meeting
-      const insertPayload = {
+      // Build payload for DB
+      const dbPayload = {
         ...payload,
-        owner_id: user.id,
+        owner_id: editingMeeting?.owner_id || user.id,
       };
 
+      // If we're editing, include the id so Supabase knows which row to update
+      if (editingMeeting?.id) {
+        dbPayload.id = editingMeeting.id;
+      }
+
+      // 🔁 UPSERT: if id exists -> update, if not -> insert
       const { data, error } = await supabase
         .from("meetings")
-        .insert(insertPayload)
+        .upsert(dbPayload, { onConflict: "id" })
         .select()
         .single();
 
       if (error) {
+        console.error("Supabase upsert error:", error);
         // eslint-disable-next-line no-alert
         alert("Could not save meeting: " + error.message);
         return;
       }
 
-      // 🔔 Notify all tagged participants
+      // 🔔 Notify tagged participants (works for both new + edited)
       await notifyMeetingParticipants(data);
 
-      setMeetings((prev) => [...prev, data]);
+      // Update local list: replace if exists, else append
+      setMeetings((prev) => {
+        const exists = prev.some((m) => m.id === data.id);
+        if (exists) {
+          return prev.map((m) => (m.id === data.id ? data : m));
+        }
+        return [...prev, data];
+      });
+
+      // Reset edit state + close modal
+      setEditingMeeting(null);
       setShowForm(false);
     } finally {
       setSaving(false);
@@ -120,15 +107,16 @@ export default function Meetings() {
     alert(summary);
   }
 
-  // ✏️ Trigger edit mode
+  // ✏️ Edit button from MeetingList
   function handleEditMeeting(meeting) {
     setEditingMeeting(meeting);
     setShowForm(true);
   }
 
-  // 🗑 Delete meeting
+  // 🗑 Delete button from MeetingList
   async function handleDeleteMeeting(meeting) {
     if (!user) return;
+
     // eslint-disable-next-line no-alert
     const confirmed = window.confirm(
       `Delete meeting "${meeting.title}"? This cannot be undone.`
@@ -141,6 +129,7 @@ export default function Meetings() {
       .eq("id", meeting.id);
 
     if (error) {
+      console.error("Supabase delete error:", error);
       // eslint-disable-next-line no-alert
       alert("Could not delete meeting: " + error.message);
       return;
@@ -176,7 +165,7 @@ export default function Meetings() {
           <button
             className="btn-primary inline-flex items-center gap-2"
             onClick={() => {
-              setEditingMeeting(null);
+              setEditingMeeting(null); // ensure "new mode"
               setShowForm(true);
             }}
           >
