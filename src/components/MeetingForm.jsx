@@ -1,11 +1,8 @@
 // src/components/MeetingForm.jsx
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { useAuth } from "../lib/AuthContext";
 
 export default function MeetingForm({ onSave, onCancel, saving, existing }) {
-  const { user } = useAuth();
-
   const [title, setTitle] = useState(existing?.title || "");
   const [meetingDate, setMeetingDate] = useState(existing?.meeting_date || "");
   const [startTime, setStartTime] = useState(existing?.start_time || "");
@@ -20,9 +17,19 @@ export default function MeetingForm({ onSave, onCancel, saving, existing }) {
   );
   const [error, setError] = useState("");
 
+  // If `existing` changes while form is open, sync fields
+  useEffect(() => {
+    setTitle(existing?.title || "");
+    setMeetingDate(existing?.meeting_date || "");
+    setStartTime(existing?.start_time || "");
+    setVenue(existing?.venue || "");
+    setAgenda(existing?.agenda || "");
+    setComments(existing?.comments || "");
+    setSelectedEmails(existing?.participant_emails || []);
+  }, [existing]);
+
   useEffect(() => {
     loadProfiles();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadProfiles() {
@@ -34,13 +41,8 @@ export default function MeetingForm({ onSave, onCancel, saving, existing }) {
 
     if (error) {
       console.error("Could not load profiles", error);
-      setProfiles([]);
     } else {
-      const currentEmail = user?.email?.toLowerCase() ?? "";
-      const others = (data || []).filter(
-        (p) => (p.email || "").toLowerCase() !== currentEmail
-      );
-      setProfiles(others);
+      setProfiles(data || []);
     }
     setProfilesLoading(false);
   }
