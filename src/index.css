@@ -15,8 +15,9 @@ body {
 }
 
 .app-shell {
-  @apply min-h-screen bg-soft text-slate-900 flex;
+  @apply min-h-screen bg-soft text-slate-900;
 }
+
 
 .card {
   @apply bg-white rounded-2xl shadow-soft border border-slate-100;

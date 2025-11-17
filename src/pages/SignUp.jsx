@@ -47,8 +47,8 @@ export default function SignUp() {
     navigate("/dashboard", { replace: true });
   }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-soft px-4 py-8">
+return (
+  <div className="w-full min-h-screen flex items-center justify-center bg-soft px-4 py-8">
       <div className="w-full max-w-md mx-auto bg-white/95 border border-slate-100 rounded-2xl shadow-soft px-6 py-7 sm:px-7 sm:py-8">
         {/* Logo + heading */}
         <div className="flex flex-col items-center mb-6">
