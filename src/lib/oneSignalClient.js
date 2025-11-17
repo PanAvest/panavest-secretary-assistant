@@ -1,13 +1,20 @@
 // src/lib/oneSignalClient.js
 import OneSignal from "react-onesignal";
 
+// Track init state + promise to avoid double init
 let initialized = false;
+let initPromise = null;
 
 /**
  * Initialize OneSignal once for the app.
  */
 export async function initOneSignal() {
+  // If we've already initialised, just return.
   if (initialized) return;
+
+  // If an init is already in progress (React StrictMode double-mount, etc),
+  // return the same promise instead of starting a new one.
+  if (initPromise) return initPromise;
 
   const appId = import.meta.env.VITE_ONESIGNAL_APP_ID;
   if (!appId) {
@@ -15,18 +22,32 @@ export async function initOneSignal() {
     return;
   }
 
-  try {
-    await OneSignal.init({
-      appId,
-      allowLocalhostAsSecureOrigin: true,
-      notifyButton: {
-        enable: false, // we're handling our own UI
-      },
-    });
-    initialized = true;
-  } catch (err) {
-    console.error("OneSignal init error", err);
-  }
+  initPromise = (async () => {
+    try {
+      await OneSignal.init({
+        appId,
+        allowLocalhostAsSecureOrigin: true,
+        notifyButton: {
+          enable: false, // we're handling our own UI
+        },
+      });
+      initialized = true;
+      // console.log("OneSignal initialised");
+    } catch (err) {
+      const msg = err?.message || String(err);
+
+      // If SDK says "already initialised", treat that as success
+      if (msg.includes("SDK already initialized")) {
+        initialized = true;
+        // console.warn("OneSignal already initialised – ignoring.");
+        return;
+      }
+
+      console.error("OneSignal init error", err);
+    }
+  })();
+
+  return initPromise;
 }
 
 /**
@@ -35,8 +56,18 @@ export async function initOneSignal() {
  */
 export async function identifyUser(email) {
   if (!email) return;
+
+  // Make sure OneSignal is initialised first
+  await initOneSignal();
+
+  if (!initialized) {
+    // If init failed or appId not set, just bail silently
+    return;
+  }
+
   try {
     await OneSignal.login(email.toLowerCase());
+    // console.log("OneSignal identifyUser:", email.toLowerCase());
   } catch (err) {
     console.error("OneSignal identifyUser error", err);
   }
@@ -56,8 +87,8 @@ export async function notifyMeetingParticipants(meeting) {
     return;
   }
 
-  const emails = meeting.participant_emails || [];
-  if (!emails.length) return;
+  const emails = meeting?.participant_emails || [];
+  if (!Array.isArray(emails) || !emails.length) return;
 
   const title = meeting.title || "New meeting";
   const date = meeting.meeting_date || "";
@@ -97,5 +128,5 @@ export async function notifyMeetingParticipants(meeting) {
   }
 }
 
-// Re-export in case you need direct access somewhere
+// Re-export if you need direct access somewhere
 export { OneSignal };

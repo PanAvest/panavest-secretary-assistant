@@ -31,6 +31,7 @@ function RequireAuth({ children }) {
 
 function AppShell() {
   useEffect(() => {
+    // Initialise OneSignal once when the app shell mounts
     initOneSignal();
   }, []);
 
