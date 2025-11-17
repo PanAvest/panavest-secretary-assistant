@@ -48,134 +48,95 @@ export default function SignUp() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 px-4 py-8">
-      <div className="w-full max-w-5xl bg-white/90 border border-slate-100 rounded-2xl shadow-soft overflow-hidden grid md:grid-cols-2">
-        {/* Brand / Left panel */}
-        <div className="hidden md:flex flex-col justify-between bg-panablue text-white px-8 py-8">
+    <div className="min-h-screen flex items-center justify-center bg-soft px-4 py-8">
+      <div className="w-full max-w-md mx-auto bg-white/95 border border-slate-100 rounded-2xl shadow-soft px-6 py-7 sm:px-7 sm:py-8">
+        {/* Logo + heading */}
+        <div className="flex flex-col items-center mb-6">
+          <div className="h-12 w-12 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden mb-2">
+            <img
+              src={logo}
+              alt="PanAvest logo"
+              className="h-10 w-auto object-contain"
+            />
+          </div>
+          <div className="text-xs font-semibold tracking-[0.12em] uppercase text-slate-400">
+            PanAvest
+          </div>
+          <div className="text-sm font-semibold text-slate-800">
+            Secretary Assistant Console
+          </div>
+        </div>
+
+        <h1 className="text-lg font-semibold text-slate-900 mb-1 text-center">
+          Create account
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 mb-5 text-center">
+          Each account has its own meetings, tasks and contacts.
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="h-10 w-10 rounded-2xl bg-white/10 flex items-center justify-center overflow-hidden">
-                <img
-                  src={logo}
-                  alt="PanAvest logo"
-                  className="h-8 w-auto object-contain"
-                />
-              </div>
-              <div>
-                <div className="text-sm font-semibold tracking-wide uppercase">
-                  PanAvest
-                </div>
-                <div className="text-xs text-white/70">
-                  Secretary Assistant Console
-                </div>
-              </div>
-            </div>
-            <h1 className="text-xl font-semibold mb-3">
-              Create an account for your office workflow.
-            </h1>
-            <p className="text-sm text-slate-100/80 leading-relaxed">
-              Each account keeps its own meetings, tasks, contacts and follow-ups,
-              tailored to how your team works.
-            </p>
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">
+              Full name
+            </label>
+            <input
+              name="full_name"
+              required
+              value={form.full_name}
+              onChange={handleChange}
+              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40 focus:border-panablue/40 bg-white"
+              placeholder="Office Secretary / Prof Douglas"
+            />
           </div>
-          <div className="text-[11px] text-white/60 mt-8">
-            You can later add more team members, so each secretary or executive
-            has a focused view of their duties.
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">
+              Email
+            </label>
+            <input
+              type="email"
+              name="email"
+              required
+              value={form.email}
+              onChange={handleChange}
+              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40 focus:border-panablue/40 bg-white"
+              placeholder="you@panavest.com"
+            />
           </div>
-        </div>
-
-        {/* Form / Right panel */}
-        <div className="px-6 sm:px-8 py-7 flex flex-col justify-center">
-          {/* Mobile logo/header */}
-          <div className="flex items-center gap-3 mb-6 md:hidden">
-            <div className="h-10 w-10 rounded-2xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden">
-              <img
-                src={logo}
-                alt="PanAvest logo"
-                className="h-8 w-auto object-contain"
-              />
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-panablue">
-                PanAvest
-              </div>
-              <div className="text-xs text-slate-500">
-                Secretary Assistant Console
-              </div>
-            </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">
+              Password
+            </label>
+            <input
+              type="password"
+              name="password"
+              required
+              value={form.password}
+              onChange={handleChange}
+              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40 focus:border-panablue/40 bg-white"
+            />
           </div>
 
-          <h2 className="text-lg font-semibold text-slate-900 mb-1">
-            Create account
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500 mb-5">
-            Each account has its own meetings, tasks and contacts.
-          </p>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                Full name
-              </label>
-              <input
-                name="full_name"
-                required
-                value={form.full_name}
-                onChange={handleChange}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40 focus:border-panablue/40 bg-white"
-                placeholder="Office Secretary / Prof Douglas"
-              />
+          {error && (
+            <div className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
+              {error}
             </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                Email
-              </label>
-              <input
-                type="email"
-                name="email"
-                required
-                value={form.email}
-                onChange={handleChange}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40 focus:border-panablue/40 bg-white"
-                placeholder="you@panavest.com"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                Password
-              </label>
-              <input
-                type="password"
-                name="password"
-                required
-                value={form.password}
-                onChange={handleChange}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/40 focus:border-panablue/40 bg-white"
-              />
-            </div>
+          )}
 
-            {error && (
-              <div className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
-                {error}
-              </div>
-            )}
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn-primary w-full justify-center mt-1"
+          >
+            {loading ? "Creating..." : "Create account"}
+          </button>
+        </form>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary w-full justify-center mt-2"
-            >
-              {loading ? "Creating..." : "Create account"}
-            </button>
-          </form>
-
-          <p className="text-[11px] sm:text-xs text-slate-500 mt-5 text-center">
-            Already have an account?{" "}
-            <Link to="/sign-in" className="text-panablue font-medium">
-              Sign in
-            </Link>
-          </p>
-        </div>
+        <p className="text-[11px] sm:text-xs text-slate-500 mt-5 text-center">
+          Already have an account?{" "}
+          <Link to="/sign-in" className="text-panablue font-medium">
+            Sign in
+          </Link>
+        </p>
       </div>
     </div>
   );
