@@ -1,6 +1,7 @@
 // src/lib/AuthContext.jsx
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
+import { initOneSignal, identifyUser } from "./oneSignalClient";
 
 const AuthContext = createContext(null);
 
@@ -51,6 +52,17 @@ export function AuthProvider({ children }) {
       subscription.unsubscribe();
     };
   }, []);
+
+  // 🔔 Initialize OneSignal + link logged-in user
+  useEffect(() => {
+    async function setupPush() {
+      await initOneSignal();
+      if (user?.email) {
+        await identifyUser(user.email);
+      }
+    }
+    setupPush();
+  }, [user]);
 
   async function loadProfile(u) {
     const { data } = await supabase

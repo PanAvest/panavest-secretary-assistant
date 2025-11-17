@@ -5,6 +5,7 @@ import { PlusCircle, RefreshCw } from "lucide-react";
 import MeetingForm from "../components/MeetingForm";
 import MeetingList from "../components/MeetingList";
 import { useAuth } from "../lib/AuthContext";
+import { notifyMeetingParticipants } from "../lib/oneSignalClient";
 
 export default function Meetings() {
   const { user } = useAuth();
@@ -56,6 +57,9 @@ export default function Meetings() {
       alert("Could not save meeting: " + error.message);
       return;
     }
+
+    // 🔔 Notify all tagged participants
+    await notifyMeetingParticipants(data);
 
     setMeetings((prev) => [...prev, data]);
     setShowForm(false);

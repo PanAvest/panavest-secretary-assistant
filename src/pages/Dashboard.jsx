@@ -5,6 +5,7 @@ import { PlusCircle } from "lucide-react";
 import MeetingForm from "../components/MeetingForm";
 import MeetingList from "../components/MeetingList";
 import { useAuth } from "../lib/AuthContext";
+import { notifyMeetingParticipants } from "../lib/oneSignalClient";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -80,6 +81,9 @@ export default function Dashboard() {
       alert("Could not save meeting: " + error.message);
       return;
     }
+
+    // 🔔 Notify participants added from the dashboard quick form
+    await notifyMeetingParticipants(data);
 
     setTodayMeetings((prev) => [...prev, data]);
     setShowForm(false);
