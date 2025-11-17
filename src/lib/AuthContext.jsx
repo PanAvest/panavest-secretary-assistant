@@ -1,5 +1,7 @@
+// src/lib/AuthContext.jsx
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
+import { OneSignal } from "./oneSignalClient";
 
 const AuthContext = createContext(null);
 
@@ -17,11 +19,23 @@ export function AuthProvider({ children }) {
         data: { session },
       } = await supabase.auth.getSession();
       if (!mounted) return;
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await loadProfile(session.user);
+      const nextUser = session?.user ?? null;
+      setUser(nextUser);
+      if (nextUser) {
+        await loadProfile(nextUser);
+        // link OneSignal to this user
+        try {
+          OneSignal.login(nextUser.id);
+        } catch (e) {
+          console.warn("OneSignal login failed", e);
+        }
       } else {
         setProfile(null);
+        try {
+          OneSignal.logout();
+        } catch (e) {
+          console.warn("OneSignal logout failed", e);
+        }
       }
       setLoading(false);
     }
@@ -35,8 +49,18 @@ export function AuthProvider({ children }) {
       setUser(nextUser);
       if (nextUser) {
         loadProfile(nextUser);
+        try {
+          OneSignal.login(nextUser.id);
+        } catch (e) {
+          console.warn("OneSignal login failed", e);
+        }
       } else {
         setProfile(null);
+        try {
+          OneSignal.logout();
+        } catch (e) {
+          console.warn("OneSignal logout failed", e);
+        }
       }
     });
 

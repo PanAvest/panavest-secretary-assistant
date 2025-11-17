@@ -1,4 +1,5 @@
-import React from "react";
+// src/App.jsx
+import React, { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
@@ -8,6 +9,7 @@ import Contacts from "./pages/Contacts";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import { AuthProvider, useAuth } from "./lib/AuthContext";
+import { initOneSignal } from "./lib/oneSignalClient";
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
@@ -28,6 +30,10 @@ function RequireAuth({ children }) {
 }
 
 function AppShell() {
+  useEffect(() => {
+    initOneSignal();
+  }, []);
+
   return (
     <div className="app-shell">
       <Routes>
