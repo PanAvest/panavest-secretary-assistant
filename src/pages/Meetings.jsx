@@ -12,6 +12,10 @@ export default function Meetings() {
   const [meetings, setMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // null = creating new, object = editing existing
+  const [editingMeeting, setEditingMeeting] = useState(null);
 
   useEffect(() => {
     if (!user) return;
@@ -40,29 +44,66 @@ export default function Meetings() {
 
   async function handleSaveMeeting(payload) {
     if (!user) return;
+    setSaving(true);
 
-    const insertPayload = {
-      ...payload,
-      owner_id: user.id,
-    };
+    try {
+      // ✏️ UPDATE existing meeting
+      if (editingMeeting) {
+        const updatePayload = {
+          ...payload,
+          owner_id: editingMeeting.owner_id || user.id,
+        };
 
-    const { data, error } = await supabase
-      .from("meetings")
-      .insert(insertPayload)
-      .select()
-      .single();
+        const { data, error } = await supabase
+          .from("meetings")
+          .update(updatePayload)
+          .eq("id", editingMeeting.id)
+          .select()
+          .single();
 
-    if (error) {
-      // eslint-disable-next-line no-alert
-      alert("Could not save meeting: " + error.message);
-      return;
+        if (error) {
+          // eslint-disable-next-line no-alert
+          alert("Could not update meeting: " + error.message);
+          return;
+        }
+
+        // Optional: notify participants about changes
+        await notifyMeetingParticipants(data);
+
+        setMeetings((prev) =>
+          prev.map((m) => (m.id === data.id ? data : m))
+        );
+        setEditingMeeting(null);
+        setShowForm(false);
+        return;
+      }
+
+      // ➕ CREATE new meeting
+      const insertPayload = {
+        ...payload,
+        owner_id: user.id,
+      };
+
+      const { data, error } = await supabase
+        .from("meetings")
+        .insert(insertPayload)
+        .select()
+        .single();
+
+      if (error) {
+        // eslint-disable-next-line no-alert
+        alert("Could not save meeting: " + error.message);
+        return;
+      }
+
+      // 🔔 Notify all tagged participants
+      await notifyMeetingParticipants(data);
+
+      setMeetings((prev) => [...prev, data]);
+      setShowForm(false);
+    } finally {
+      setSaving(false);
     }
-
-    // 🔔 Notify all tagged participants
-    await notifyMeetingParticipants(data);
-
-    setMeetings((prev) => [...prev, data]);
-    setShowForm(false);
   }
 
   function handleSelectMeeting(m) {
@@ -77,6 +118,40 @@ export default function Meetings() {
       .join("\n");
     // eslint-disable-next-line no-alert
     alert(summary);
+  }
+
+  // ✏️ Trigger edit mode
+  function handleEditMeeting(meeting) {
+    setEditingMeeting(meeting);
+    setShowForm(true);
+  }
+
+  // 🗑 Delete meeting
+  async function handleDeleteMeeting(meeting) {
+    if (!user) return;
+    // eslint-disable-next-line no-alert
+    const confirmed = window.confirm(
+      `Delete meeting "${meeting.title}"? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from("meetings")
+      .delete()
+      .eq("id", meeting.id);
+
+    if (error) {
+      // eslint-disable-next-line no-alert
+      alert("Could not delete meeting: " + error.message);
+      return;
+    }
+
+    setMeetings((prev) => prev.filter((m) => m.id !== meeting.id));
+  }
+
+  function handleCloseForm() {
+    setShowForm(false);
+    setEditingMeeting(null);
   }
 
   return (
@@ -100,7 +175,10 @@ export default function Meetings() {
           </button>
           <button
             className="btn-primary inline-flex items-center gap-2"
-            onClick={() => setShowForm(true)}
+            onClick={() => {
+              setEditingMeeting(null);
+              setShowForm(true);
+            }}
           >
             <PlusCircle size={16} />
             New meeting
@@ -111,19 +189,25 @@ export default function Meetings() {
       {loading ? (
         <div className="card px-4 py-6 text-sm text-slate-500">Loading...</div>
       ) : (
-        <MeetingList items={meetings} onSelect={handleSelectMeeting} />
+        <MeetingList
+          items={meetings}
+          onSelect={handleSelectMeeting}
+          onEdit={handleEditMeeting}
+          onDelete={handleDeleteMeeting}
+        />
       )}
 
       {showForm && (
         <div className="fixed inset-0 z-30 bg-black/30 flex items-center justify-center px-4">
           <div className="card max-w-2xl w-full p-4 md:p-6 max-h-[90vh] overflow-auto">
             <h2 className="text-sm md:text-base font-semibold text-slate-800 mb-4">
-              New meeting
+              {editingMeeting ? "Edit meeting" : "New meeting"}
             </h2>
             <MeetingForm
+              existing={editingMeeting}
               onSave={handleSaveMeeting}
-              onCancel={() => setShowForm(false)}
-              saving={false}
+              onCancel={handleCloseForm}
+              saving={saving}
             />
           </div>
         </div>
