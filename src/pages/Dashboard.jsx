@@ -8,23 +8,26 @@ import { notifyMeetingParticipants } from "../lib/oneSignalClient";
 
 export default function Dashboard() {
   const { user } = useAuth();
+
   const [todayMeetings, setTodayMeetings] = useState([]);
+  const [upcomingMeetings, setUpcomingMeetings] = useState([]);
   const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingMeetings, setLoadingMeetings] = useState(true);
+  const [loadingTasks, setLoadingTasks] = useState(true);
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
     if (!user) return;
 
     async function load() {
-      setLoading(true);
-
       const todayStr = new Date().toISOString().slice(0, 10);
 
+      // All meetings from today going forward
       const meetingsQuery = supabase
         .from("meetings")
         .select("*")
-        .eq("meeting_date", todayStr)
+        .gte("meeting_date", todayStr)
+        .order("meeting_date", { ascending: true })
         .order("start_time", { ascending: true });
 
       const tasksQuery = supabase
@@ -34,14 +37,27 @@ export default function Dashboard() {
         .eq("status", "pending")
         .order("due_date", { ascending: true });
 
+      setLoadingMeetings(true);
+      setLoadingTasks(true);
+
       const [{ data: m, error: mErr }, { data: t, error: tErr }] =
         await Promise.all([meetingsQuery, tasksQuery]);
 
+      const allMeetings = m || [];
+
       if (mErr) {
-        alert("Could not load today's meetings: " + mErr.message);
+        alert("Could not load meetings: " + mErr.message);
         setTodayMeetings([]);
+        setUpcomingMeetings([]);
       } else {
-        setTodayMeetings(m || []);
+        const todays = allMeetings.filter(
+          (row) => row.meeting_date === todayStr
+        );
+        const upcoming = allMeetings.filter(
+          (row) => row.meeting_date > todayStr
+        );
+        setTodayMeetings(todays);
+        setUpcomingMeetings(upcoming);
       }
 
       if (tErr) {
@@ -51,7 +67,8 @@ export default function Dashboard() {
         setTasks(t || []);
       }
 
-      setLoading(false);
+      setLoadingMeetings(false);
+      setLoadingTasks(false);
     }
 
     load();
@@ -91,7 +108,15 @@ export default function Dashboard() {
       console.error("notifyMeetingParticipants error:", err);
     }
 
-    setTodayMeetings((prev) => [...prev, data]);
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    // Put new meeting into the right bucket
+    if (data.meeting_date === todayStr) {
+      setTodayMeetings((prev) => [...prev, data]);
+    } else if (data.meeting_date > todayStr) {
+      setUpcomingMeetings((prev) => [...prev, data]);
+    }
+
     setShowForm(false);
   }
 
@@ -104,6 +129,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
           <h1 className="text-lg md:text-xl font-semibold text-panablue">
@@ -123,61 +149,117 @@ export default function Dashboard() {
       </div>
 
       <div className="grid md:grid-cols-5 gap-4">
-        {/* Today’s meetings */}
+        {/* Meetings column */}
         <div className="card px-4 py-3 md:col-span-3">
           <div className="flex items-center justify-between mb-3">
             <div>
               <h2 className="text-sm font-semibold text-slate-800">
-                Today&apos;s meetings
+                Meetings
               </h2>
               <p className="text-xs text-slate-500">
-                All meetings scheduled for today.
+                Today&apos;s meetings and upcoming sessions.
               </p>
             </div>
           </div>
 
-          {loading ? (
-            <div className="py-6 text-sm text-slate-500">Loading...</div>
-          ) : todayMeetings.length === 0 ? (
-            <div className="py-6 text-xs text-slate-500">
-              No meetings scheduled for today.
-            </div>
-          ) : (
-            <div className="space-y-2 max-h-72 overflow-auto">
-              {todayMeetings.map((m) => (
-                <div
-                  key={m.id}
-                  className="border border-slate-100 rounded-md px-3 py-2 flex flex-col gap-1 bg-white"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-xs font-medium text-slate-900">
-                      {m.title}
+          {/* Today’s meetings */}
+          <div className="mb-4">
+            <h3 className="text-xs font-semibold text-slate-700 mb-2">
+              Today&apos;s meetings
+            </h3>
+            {loadingMeetings ? (
+              <div className="py-3 text-xs text-slate-500">Loading...</div>
+            ) : todayMeetings.length === 0 ? (
+              <div className="py-3 text-xs text-slate-500">
+                No meetings scheduled for today.
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-40 overflow-auto">
+                {todayMeetings.map((m) => (
+                  <div
+                    key={m.id}
+                    className="border border-slate-100 rounded-md px-3 py-2 flex flex-col gap-1 bg-white"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-xs font-medium text-slate-900">
+                        {m.title}
+                      </div>
+                      {m.start_time && (
+                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-panablue/5 text-panablue">
+                          {m.start_time}
+                        </span>
+                      )}
                     </div>
-                    {m.start_time && (
-                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-panablue/5 text-panablue">
-                        {m.start_time}
-                      </span>
+                    {m.venue && (
+                      <div className="text-[11px] text-slate-500">
+                        Venue: {m.venue}
+                      </div>
+                    )}
+                    {m.agenda && (
+                      <div className="text-[11px] text-slate-600 line-clamp-2">
+                        {m.agenda}
+                      </div>
+                    )}
+                    {m.attendees_text && (
+                      <div className="text-[11px] text-slate-500">
+                        Attendees: {m.attendees_text}
+                      </div>
                     )}
                   </div>
-                  {m.venue && (
-                    <div className="text-[11px] text-slate-500">
-                      Venue: {m.venue}
+                ))}
+              </div>
+            )}
+          </div>
+
+          <hr className="border-slate-100 my-2" />
+
+          {/* Upcoming meetings */}
+          <div>
+            <h3 className="text-xs font-semibold text-slate-700 mb-2">
+              Upcoming meetings
+            </h3>
+            {loadingMeetings ? (
+              <div className="py-3 text-xs text-slate-500">Loading...</div>
+            ) : upcomingMeetings.length === 0 ? (
+              <div className="py-3 text-xs text-slate-500">
+                No upcoming meetings scheduled.
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-40 overflow-auto">
+                {upcomingMeetings.map((m) => (
+                  <div
+                    key={m.id}
+                    className="border border-slate-100 rounded-md px-3 py-2 flex flex-col gap-1 bg-white"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-xs font-medium text-slate-900">
+                        {m.title}
+                      </div>
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                        {m.meeting_date}
+                        {m.start_time ? ` • ${m.start_time}` : ""}
+                      </span>
                     </div>
-                  )}
-                  {m.agenda && (
-                    <div className="text-[11px] text-slate-600 line-clamp-2">
-                      {m.agenda}
-                    </div>
-                  )}
-                  {m.attendees_text && (
-                    <div className="text-[11px] text-slate-500">
-                      Attendees: {m.attendees_text}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+                    {m.venue && (
+                      <div className="text-[11px] text-slate-500">
+                        Venue: {m.venue}
+                      </div>
+                    )}
+                    {m.agenda && (
+                      <div className="text-[11px] text-slate-600 line-clamp-2">
+                        {m.agenda}
+                      </div>
+                    )}
+                    {m.attendees_text && (
+                      <div className="text-[11px] text-slate-500">
+                        Attendees: {m.attendees_text}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Tasks + notes */}
@@ -189,7 +271,7 @@ export default function Dashboard() {
             <p className="text-xs text-slate-500 mb-3">
               Tasks & actions the secretary must not forget.
             </p>
-            {loading ? (
+            {loadingTasks ? (
               <div className="py-4 text-xs text-slate-500">Loading...</div>
             ) : tasks.length === 0 ? (
               <div className="py-4 text-xs text-slate-500">
