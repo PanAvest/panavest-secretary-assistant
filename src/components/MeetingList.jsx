@@ -2,11 +2,24 @@
 import React from "react";
 import { Pencil, Trash2 } from "lucide-react";
 
+function renderStatusBadge(status) {
+  const base =
+    "text-[11px] px-2 py-0.5 rounded-full border font-medium inline-flex items-center";
+  if (status === "completed") {
+    return <span className={`${base} bg-emerald-50 text-emerald-700 border-emerald-100`}>completed</span>;
+  }
+  if (status === "cancelled") {
+    return <span className={`${base} bg-rose-50 text-rose-600 border-rose-100`}>cancelled</span>;
+  }
+  return <span className={`${base} bg-slate-50 text-slate-700 border-slate-200`}>{status || "scheduled"}</span>;
+}
+
 export default function MeetingList({
   meetings,
   loading = false,
   onEdit,
   onDelete,
+  onStatusChange,
 }) {
   const items = Array.isArray(meetings) ? meetings : [];
 
@@ -33,17 +46,13 @@ export default function MeetingList({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-medium text-sm md:text-base">{m.title}</h3>
-              {m.meeting_date && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
-                  {m.meeting_date} {m.start_time ? `• ${m.start_time}` : ""}
-                </span>
-              )}
-              {m.status && (
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-                  {m.status}
-                </span>
-              )}
-            </div>
+            {m.meeting_date && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
+                {m.meeting_date} {m.start_time ? `• ${m.start_time}` : ""}
+              </span>
+            )}
+            {m.status && renderStatusBadge(m.status)}
+          </div>
 
             {m.venue && (
               <p className="text-xs text-gray-600 mt-1">Venue: {m.venue}</p>
@@ -71,7 +80,35 @@ export default function MeetingList({
           </div>
 
           {(onEdit || onDelete) && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              {onStatusChange && (
+                <>
+                  {m.status !== "completed" && (
+                    <button
+                      onClick={() => onStatusChange(m, "completed")}
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs border border-emerald-100 text-emerald-700 rounded-md hover:bg-emerald-50"
+                    >
+                      Mark completed
+                    </button>
+                  )}
+                  {m.status !== "cancelled" && (
+                    <button
+                      onClick={() => onStatusChange(m, "cancelled")}
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs border border-rose-100 text-rose-600 rounded-md hover:bg-rose-50"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                  {m.status !== "scheduled" && (
+                    <button
+                      onClick={() => onStatusChange(m, "scheduled")}
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50"
+                    >
+                      Mark pending
+                    </button>
+                  )}
+                </>
+              )}
               {onEdit && (
                 <button
                   onClick={() => onEdit(m)}

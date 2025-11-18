@@ -166,6 +166,35 @@ export async function notifyMeetingParticipants(meeting) {
     .filter(Boolean)
     .join(" • ");
 
+  await sendNotification(emails, {
+    appId,
+    restKey,
+    title: "New PanAvest meeting",
+    contents: contentsText || "You were added to a PanAvest meeting.",
+    data: {
+      type: "meeting_added",
+      meeting_id: meeting.id,
+    },
+    landingUrl,
+  });
+}
+
+// Don't export OneSignal directly anywhere else.
+// Keep all access through this module.
+export { OneSignal };
+
+function normalizeEmails(emails) {
+  if (!Array.isArray(emails)) return [];
+  return emails
+    .filter(Boolean)
+    .map((e) => String(e).trim().toLowerCase())
+    .filter(Boolean);
+}
+
+async function sendNotification(emails, { appId, restKey, title, contents, data, landingUrl }) {
+  const cleanEmails = normalizeEmails(emails);
+  if (!cleanEmails.length) return;
+
   try {
     const res = await fetch("https://api.onesignal.com/notifications", {
       method: "POST",
@@ -175,18 +204,15 @@ export async function notifyMeetingParticipants(meeting) {
       },
       body: JSON.stringify({
         app_id: appId,
-        include_external_user_ids: emails.map((e) => e.toLowerCase()),
+        include_external_user_ids: cleanEmails,
         channel_for_external_user_ids: "push",
-        headings: { en: "New PanAvest meeting" },
+        headings: { en: title },
         contents: {
-          en: contentsText || "You were added to a PanAvest meeting.",
+          en: contents,
         },
         app_url: landingUrl,
         web_url: landingUrl,
-        data: {
-          type: "meeting_added",
-          meeting_id: meeting.id,
-        },
+        data,
       }),
     });
 
@@ -204,6 +230,69 @@ export async function notifyMeetingParticipants(meeting) {
   }
 }
 
-// Don't export OneSignal directly anywhere else.
-// Keep all access through this module.
-export { OneSignal };
+export async function notifyMeetingStatusChange(meeting, statusOverride) {
+  const status = statusOverride || meeting?.status || "updated";
+  const appId = import.meta.env.VITE_ONESIGNAL_APP_ID;
+  const restKey = import.meta.env.VITE_ONESIGNAL_REST_API_KEY;
+  const landingUrl =
+    typeof window !== "undefined" && window.location
+      ? `${window.location.origin}/meetings`
+      : undefined;
+
+  if (!appId || !restKey) {
+    console.warn("[OneSignal] appId or REST API key missing – cannot notify.");
+    return;
+  }
+
+  if (!meeting) return;
+  const emails = normalizeEmails(meeting.participant_emails || []);
+  if (!emails.length) return;
+
+  const title = meeting.title || "Meeting";
+  const contents = `Meeting "${title}" marked as ${status}.`;
+
+  await sendNotification(emails, {
+    appId,
+    restKey,
+    title: "Meeting status updated",
+    contents,
+    data: { type: "meeting_status", meeting_id: meeting.id, status },
+    landingUrl,
+  });
+}
+
+export async function notifyTaskStatusChange(task, status, userEmail) {
+  const appId = import.meta.env.VITE_ONESIGNAL_APP_ID;
+  const restKey = import.meta.env.VITE_ONESIGNAL_REST_API_KEY;
+  const landingUrl =
+    typeof window !== "undefined" && window.location
+      ? `${window.location.origin}/tasks`
+      : undefined;
+
+  if (!appId || !restKey) {
+    console.warn("[OneSignal] appId or REST API key missing – cannot notify.");
+    return;
+  }
+
+  if (!task) return;
+
+  const possibleEmails = [
+    userEmail,
+    task.owner_email,
+    task.assignee && task.assignee.includes("@") ? task.assignee : null,
+  ];
+  const emails = normalizeEmails(possibleEmails);
+  if (!emails.length) return;
+
+  const title = task.title || "Task";
+  const contents = `Task "${title}" marked as ${status}.`;
+
+  await sendNotification(emails, {
+    appId,
+    restKey,
+    title: "Task status updated",
+    contents,
+    data: { type: "task_status", task_id: task.id, status },
+    landingUrl,
+  });
+}

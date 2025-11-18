@@ -5,7 +5,10 @@ import { PlusCircle, RefreshCw } from "lucide-react";
 import MeetingForm from "../components/MeetingForm";
 import MeetingList from "../components/MeetingList";
 import { useAuth } from "../lib/AuthContext";
-import { notifyMeetingParticipants } from "../lib/oneSignalClient";
+import {
+  notifyMeetingParticipants,
+  notifyMeetingStatusChange,
+} from "../lib/oneSignalClient";
 
 export default function Meetings() {
   const { user } = useAuth();
@@ -105,8 +108,13 @@ export default function Meetings() {
             prev.map((m) => (m.id === data.id ? data : m))
           );
 
+          const statusChanged = editingMeeting.status !== payload.status;
           try {
-            await notifyMeetingParticipants(data);
+            if (statusChanged) {
+              await notifyMeetingStatusChange(data, payload.status);
+            } else {
+              await notifyMeetingParticipants(data);
+            }
           } catch (notifyErr) {
             console.error("Error notifying participants:", notifyErr);
           }
@@ -139,6 +147,29 @@ export default function Meetings() {
       }
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleStatusChange(meeting, nextStatus) {
+    const { data, error } = await supabase
+      .from("meetings")
+      .update({ status: nextStatus })
+      .eq("id", meeting.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating meeting:", error);
+      alert("Could not update meeting status. Please try again.");
+      return;
+    }
+
+    setMeetings((prev) => prev.map((m) => (m.id === meeting.id ? data : m)));
+
+    try {
+      await notifyMeetingStatusChange(data, nextStatus);
+    } catch (notifyErr) {
+      console.error("Error notifying status change:", notifyErr);
     }
   }
 
@@ -185,6 +216,7 @@ export default function Meetings() {
         loading={loading}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onStatusChange={handleStatusChange}
       />
     </div>
   );

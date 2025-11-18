@@ -37,7 +37,6 @@ export default function Dashboard() {
         .from("tasks")
         .select("*")
         .eq("owner_id", user.id)
-        .eq("status", "pending")
         .order("due_date", { ascending: true });
 
       setLoadingMeetings(true);
@@ -141,6 +140,30 @@ export default function Dashboard() {
     month: "short",
   });
 
+  const renderStatusBadge = (status) => {
+    const base =
+      "text-[11px] px-2 py-0.5 rounded-full border font-medium inline-flex items-center";
+    if (status === "completed") {
+      return (
+        <span className={`${base} bg-emerald-50 text-emerald-700 border-emerald-100`}>
+          completed
+        </span>
+      );
+    }
+    if (status === "cancelled") {
+      return (
+        <span className={`${base} bg-rose-50 text-rose-600 border-rose-100`}>
+          cancelled
+        </span>
+      );
+    }
+    return (
+      <span className={`${base} bg-slate-50 text-slate-700 border-slate-200`}>
+        {status || "scheduled"}
+      </span>
+    );
+  };
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -230,11 +253,14 @@ export default function Dashboard() {
                       <div className="text-xs font-medium text-slate-900">
                         {m.title}
                       </div>
-                      {m.start_time && (
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-panablue/5 text-panablue">
-                          {m.start_time}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {m.start_time && (
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-panablue/5 text-panablue">
+                            {m.start_time}
+                          </span>
+                        )}
+                        {renderStatusBadge(m.status)}
+                      </div>
                     </div>
                     {m.venue && (
                       <div className="text-[11px] text-slate-500">
@@ -281,10 +307,13 @@ export default function Dashboard() {
                       <div className="text-xs font-medium text-slate-900">
                         {m.title}
                       </div>
-                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-                        {m.meeting_date}
-                        {m.start_time ? ` • ${m.start_time}` : ""}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                          {m.meeting_date}
+                          {m.start_time ? ` • ${m.start_time}` : ""}
+                        </span>
+                        {renderStatusBadge(m.status)}
+                      </div>
                     </div>
                     {m.venue && (
                       <div className="text-[11px] text-slate-500">
@@ -312,7 +341,7 @@ export default function Dashboard() {
         <div className="space-y-4 md:col-span-2">
           <div className="card px-4 py-3">
             <h2 className="text-sm font-semibold text-slate-800 mb-1">
-              Pending follow-ups
+              Tasks & follow-ups
             </h2>
             <p className="text-xs text-slate-500 mb-3">
               Tasks & actions the secretary must not forget.
@@ -340,9 +369,12 @@ export default function Dashboard() {
                         </div>
                       )}
                     </div>
-                    <span className="badge bg-panablue/5 text-panablue">
-                      {t.assignee || "Secretary"}
-                    </span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="badge bg-panablue/5 text-panablue">
+                        {t.assignee || "Secretary"}
+                      </span>
+                      {renderStatusBadge(t.status)}
+                    </div>
                   </li>
                 ))}
               </ul>

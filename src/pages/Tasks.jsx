@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { CheckCircle2, Circle, PlusCircle } from "lucide-react";
 import { useAuth } from "../lib/AuthContext";
+import { notifyTaskStatusChange } from "../lib/oneSignalClient";
 
 const defaultForm = {
   title: "",
@@ -79,6 +80,10 @@ export default function Tasks() {
 
   async function toggleStatus(task) {
     const nextStatus = task.status === "completed" ? "pending" : "completed";
+    await setStatus(task, nextStatus);
+  }
+
+  async function setStatus(task, nextStatus) {
     const { data, error } = await supabase
       .from("tasks")
       .update({ status: nextStatus })
@@ -90,6 +95,13 @@ export default function Tasks() {
       alert("Could not update task: " + error.message);
       return;
     }
+
+    try {
+      await notifyTaskStatusChange(data, nextStatus, user?.email);
+    } catch (err) {
+      console.warn("notifyTaskStatusChange failed:", err);
+    }
+
     setTasks((prev) =>
       sortTasks(prev.map((t) => (t.id === task.id ? data : t)))
     );
@@ -156,7 +168,15 @@ export default function Tasks() {
                       <span className="badge bg-panablue/5 text-panablue">
                         {t.assignee || "Secretary"}
                       </span>
-                      <span className="badge bg-slate-50 text-slate-500">
+                      <span
+                        className={`badge ${
+                          t.status === "completed"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : t.status === "cancelled"
+                            ? "bg-rose-50 text-rose-600"
+                            : "bg-slate-50 text-slate-600"
+                        }`}
+                      >
                         {t.status}
                       </span>
                     </div>
@@ -165,6 +185,35 @@ export default function Tasks() {
                         {t.notes}
                       </div>
                     )}
+                    <div className="flex flex-wrap gap-2 mt-2 text-[11px]">
+                      {t.status !== "completed" && (
+                        <button
+                          type="button"
+                          onClick={() => setStatus(t, "completed")}
+                          className="px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100"
+                        >
+                          Mark completed
+                        </button>
+                      )}
+                      {t.status !== "cancelled" && (
+                        <button
+                          type="button"
+                          onClick={() => setStatus(t, "cancelled")}
+                          className="px-2 py-1 rounded-full bg-rose-50 text-rose-600 border border-rose-100"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                      {t.status !== "pending" && (
+                        <button
+                          type="button"
+                          onClick={() => setStatus(t, "pending")}
+                          className="px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200"
+                        >
+                          Mark pending
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </li>
               ))}
