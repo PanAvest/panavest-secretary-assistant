@@ -16,6 +16,8 @@ export default function MeetingForm({ onSave, onCancel, saving, existing }) {
 
   const [profiles, setProfiles] = useState([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
+  const inputClasses =
+    "w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-panablue/30 bg-white";
 
   // Load profiles (for attendee selection)
   useEffect(() => {
@@ -121,7 +123,7 @@ export default function MeetingForm({ onSave, onCancel, saving, existing }) {
           </label>
           <input
             type="text"
-            className="w-full border rounded-md px-3 py-2 text-sm"
+            className={inputClasses}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
@@ -134,7 +136,7 @@ export default function MeetingForm({ onSave, onCancel, saving, existing }) {
           </label>
           <input
             type="date"
-            className="w-full border rounded-md px-3 py-2 text-sm"
+            className={inputClasses}
             value={meetingDate}
             onChange={(e) => setMeetingDate(e.target.value)}
             required
@@ -147,7 +149,7 @@ export default function MeetingForm({ onSave, onCancel, saving, existing }) {
           </label>
           <input
             type="time"
-            className="w-full border rounded-md px-3 py-2 text-sm"
+            className={inputClasses}
             value={startTime}
             onChange={(e) => setStartTime(e.target.value)}
             required
@@ -158,7 +160,7 @@ export default function MeetingForm({ onSave, onCancel, saving, existing }) {
           <label className="block text-sm font-medium mb-1">End Time</label>
           <input
             type="time"
-            className="w-full border rounded-md px-3 py-2 text-sm"
+            className={inputClasses}
             value={endTime}
             onChange={(e) => setEndTime(e.target.value)}
           />
@@ -168,7 +170,7 @@ export default function MeetingForm({ onSave, onCancel, saving, existing }) {
           <label className="block text-sm font-medium mb-1">Venue</label>
           <input
             type="text"
-            className="w-full border rounded-md px-3 py-2 text-sm"
+            className={inputClasses}
             value={venue}
             onChange={(e) => setVenue(e.target.value)}
             placeholder="Boardroom, Online (Zoom), etc."
@@ -178,7 +180,7 @@ export default function MeetingForm({ onSave, onCancel, saving, existing }) {
         <div>
           <label className="block text-sm font-medium mb-1">Status</label>
           <select
-            className="w-full border rounded-md px-3 py-2 text-sm"
+            className={inputClasses}
             value={status}
             onChange={(e) => setStatus(e.target.value)}
           >
@@ -192,7 +194,7 @@ export default function MeetingForm({ onSave, onCancel, saving, existing }) {
       <div>
         <label className="block text-sm font-medium mb-1">Agenda</label>
         <textarea
-          className="w-full border rounded-md px-3 py-2 text-sm"
+          className={inputClasses}
           rows={3}
           value={agenda}
           onChange={(e) => setAgenda(e.target.value)}
@@ -203,7 +205,7 @@ export default function MeetingForm({ onSave, onCancel, saving, existing }) {
       <div>
         <label className="block text-sm font-medium mb-1">Comments</label>
         <textarea
-          className="w-full border rounded-md px-3 py-2 text-sm"
+          className={inputClasses}
           rows={2}
           value={comments}
           onChange={(e) => setComments(e.target.value)}
@@ -261,7 +263,7 @@ export default function MeetingForm({ onSave, onCancel, saving, existing }) {
           Attendees note (optional)
         </label>
         <textarea
-          className="w-full border rounded-md px-3 py-2 text-sm"
+          className={inputClasses}
           rows={2}
           value={attendeesText}
           onChange={(e) => setAttendeesText(e.target.value)}
@@ -277,14 +279,14 @@ export default function MeetingForm({ onSave, onCancel, saving, existing }) {
         <button
           type="button"
           onClick={onCancel}
-          className="px-3 py-1.5 text-sm border rounded-md hover:bg-gray-50"
+          className="btn-ghost"
           disabled={saving}
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-60"
+          className="btn-primary min-w-[140px]"
           disabled={saving}
         >
           {saving

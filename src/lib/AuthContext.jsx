@@ -56,9 +56,13 @@ export function AuthProvider({ children }) {
   // 🔔 Initialize OneSignal + link logged-in user
   useEffect(() => {
     async function setupPush() {
-      await initOneSignal();
-      if (user?.email) {
-        await identifyUser(user.email);
+      try {
+        await initOneSignal();
+        if (user?.email) {
+          await identifyUser(user.email);
+        }
+      } catch (err) {
+        console.warn("[Push] setup failed (non-fatal):", err);
       }
     }
     setupPush();

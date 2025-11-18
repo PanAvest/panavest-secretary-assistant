@@ -14,10 +14,12 @@ export default function Dashboard() {
   const [tasks, setTasks] = useState([]);
   const [loadingMeetings, setLoadingMeetings] = useState(true);
   const [loadingTasks, setLoadingTasks] = useState(true);
+  const [savingMeeting, setSavingMeeting] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
     if (!user) return;
+    let cancelled = false;
 
     async function load() {
       const todayStr = new Date().toISOString().slice(0, 10);
@@ -26,6 +28,7 @@ export default function Dashboard() {
       const meetingsQuery = supabase
         .from("meetings")
         .select("*")
+        .eq("owner_id", user.id)
         .gte("meeting_date", todayStr)
         .order("meeting_date", { ascending: true })
         .order("start_time", { ascending: true });
@@ -42,6 +45,8 @@ export default function Dashboard() {
 
       const [{ data: m, error: mErr }, { data: t, error: tErr }] =
         await Promise.all([meetingsQuery, tasksQuery]);
+
+      if (cancelled) return;
 
       const allMeetings = m || [];
 
@@ -72,10 +77,14 @@ export default function Dashboard() {
     }
 
     load();
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   async function handleSaveMeeting(formValues) {
     if (!user) return;
+    setSavingMeeting(true);
 
     const insertPayload = {
       title: formValues.title,
@@ -99,25 +108,30 @@ export default function Dashboard() {
 
     if (error) {
       alert("Could not save meeting: " + error.message);
+      setSavingMeeting(false);
       return;
     }
 
     try {
-      await notifyMeetingParticipants(data);
-    } catch (err) {
-      console.error("notifyMeetingParticipants error:", err);
+      try {
+        await notifyMeetingParticipants(data);
+      } catch (err) {
+        console.error("notifyMeetingParticipants error:", err);
+      }
+
+      const todayStr = new Date().toISOString().slice(0, 10);
+
+      // Put new meeting into the right bucket
+      if (data.meeting_date === todayStr) {
+        setTodayMeetings((prev) => [...prev, data]);
+      } else if (data.meeting_date > todayStr) {
+        setUpcomingMeetings((prev) => [...prev, data]);
+      }
+
+      setShowForm(false);
+    } finally {
+      setSavingMeeting(false);
     }
-
-    const todayStr = new Date().toISOString().slice(0, 10);
-
-    // Put new meeting into the right bucket
-    if (data.meeting_date === todayStr) {
-      setTodayMeetings((prev) => [...prev, data]);
-    } else if (data.meeting_date > todayStr) {
-      setUpcomingMeetings((prev) => [...prev, data]);
-    }
-
-    setShowForm(false);
   }
 
   const today = new Date();
@@ -146,6 +160,38 @@ export default function Dashboard() {
           <PlusCircle size={16} />
           New meeting
         </button>
+      </div>
+
+      {/* Quick stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="card px-3 py-3">
+          <p className="text-[11px] text-slate-500">Today</p>
+          <p className="text-xl font-semibold text-panablue">
+            {loadingMeetings ? "…" : todayMeetings.length}
+          </p>
+          <p className="text-[11px] text-slate-500">meetings</p>
+        </div>
+        <div className="card px-3 py-3">
+          <p className="text-[11px] text-slate-500">Upcoming</p>
+          <p className="text-xl font-semibold text-panared">
+            {loadingMeetings ? "…" : upcomingMeetings.length}
+          </p>
+          <p className="text-[11px] text-slate-500">scheduled</p>
+        </div>
+        <div className="card px-3 py-3">
+          <p className="text-[11px] text-slate-500">Pending tasks</p>
+          <p className="text-xl font-semibold text-emerald-700">
+            {loadingTasks ? "…" : tasks.length}
+          </p>
+          <p className="text-[11px] text-slate-500">follow-ups</p>
+        </div>
+        <div className="card px-3 py-3">
+          <p className="text-[11px] text-slate-500">Today&apos;s date</p>
+          <p className="text-sm font-semibold text-slate-800">
+            {formattedToday}
+          </p>
+          <p className="text-[11px] text-slate-500">Stay on track</p>
+        </div>
       </div>
 
       <div className="grid md:grid-cols-5 gap-4">
@@ -324,7 +370,7 @@ export default function Dashboard() {
             <MeetingForm
               onSave={handleSaveMeeting}
               onCancel={() => setShowForm(false)}
-              saving={false}
+              saving={savingMeeting}
             />
           </div>
         </div>

@@ -30,7 +30,7 @@ Open http://localhost:5173 in your browser.
 
 ## 2. Supabase setup
 
-1. Go to https://supabase.com and create a new project (or use an existing one).
+1. Go to https://supabase.com and create a new project (or use an existing one). @Sas090761
 2. In the SQL editor, create the tables:
 
 ```sql

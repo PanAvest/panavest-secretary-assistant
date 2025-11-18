@@ -1,51 +1,47 @@
 // src/components/TopBar.jsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Menu, Bell, LogOut, X } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/AuthContext";
 import { supabase } from "../lib/supabaseClient";
+import {
+  getNotificationPermission,
+  requestNotificationPermission,
+} from "../lib/oneSignalClient";
 
 const navItems = [
-  { to: "/dashboard", label: "Dashboard" },
-  { to: "/meetings", label: "Meetings" },
   { to: "/tasks", label: "Tasks & Follow-ups" },
+  { to: "/meetings", label: "Meetings" },
+  { to: "/dashboard", label: "Dashboard" },
   { to: "/contacts", label: "Contacts" },
 ];
 
 export default function TopBar() {
   const { profile, user } = useAuth();
   const navigate = useNavigate();
-  const [permission, setPermission] = useState(
-    typeof Notification !== "undefined" ? Notification.permission : "default"
-  );
+  const [permission, setPermission] = useState("default");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pushEnabled = permission === "granted";
+  const pushDenied = permission === "denied";
 
-  async function requestNotifications() {
-    if (typeof Notification === "undefined") {
-      alert("Browser notifications are not supported on this device.");
-      return;
-    }
-    const result = await Notification.requestPermission();
-    setPermission(result);
-    if (result === "granted") {
-      new Notification("Notifications enabled", {
-        body: "You will receive reminders while this tab is open.",
+  useEffect(() => {
+    let active = true;
+    getNotificationPermission().then((status) => {
+      if (active) setPermission(status);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function handleNotifications() {
+    const next = await requestNotificationPermission();
+    setPermission(next);
+    if (next === "granted" && typeof Notification !== "undefined") {
+      new Notification("Push enabled", {
+        body: "You will now get meeting + task reminders on this device.",
       });
     }
-  }
-
-  function testNotification() {
-    if (typeof Notification === "undefined") {
-      alert("Browser notifications are not supported on this device.");
-      return;
-    }
-    if (Notification.permission !== "granted") {
-      alert("Please allow notifications to receive reminders.");
-      return;
-    }
-    new Notification("PanAvest Secretary Assistant", {
-      body: "This is a sample reminder notification.",
-    });
   }
 
   async function handleSignOut() {
@@ -91,17 +87,33 @@ export default function TopBar() {
             {/* Notification button */}
             <button
               type="button"
-              className="h-9 w-9 rounded-full border border-slate-200 bg-white flex items-center justify-center active:scale-[0.97] transition"
-              onClick={
-                permission === "granted" ? testNotification : requestNotifications
-              }
+              className={[
+                "h-9 w-9 rounded-full border flex items-center justify-center active:scale-[0.97] transition",
+                pushEnabled
+                  ? "border-emerald-200 bg-emerald-50"
+                  : pushDenied
+                  ? "border-rose-200 bg-rose-50"
+                  : "border-slate-200 bg-white",
+              ].join(" ")}
+              onClick={handleNotifications}
               title={
-                permission === "granted"
-                  ? "Test notification"
-                  : "Enable notifications"
+                pushEnabled
+                  ? "Push notifications on – tap to re-check"
+                  : pushDenied
+                  ? "Notifications blocked in browser settings"
+                  : "Enable meeting reminders"
               }
             >
-              <Bell size={16} className="text-panablue" />
+              <Bell
+                size={16}
+                className={
+                  pushEnabled
+                    ? "text-emerald-700"
+                    : pushDenied
+                    ? "text-rose-600"
+                    : "text-panablue"
+                }
+              />
             </button>
 
             {/* Sign Out Button */}

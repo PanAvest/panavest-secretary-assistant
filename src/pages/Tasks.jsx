@@ -23,6 +23,15 @@ export default function Tasks() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  function sortTasks(list) {
+    return [...list].sort((a, b) => {
+      if (a.status === b.status) {
+        return (a.due_date || "").localeCompare(b.due_date || "");
+      }
+      return a.status === "pending" ? -1 : 1;
+    });
+  }
+
   async function loadTasks() {
     if (!user) return;
     setLoading(true);
@@ -36,7 +45,7 @@ export default function Tasks() {
       // eslint-disable-next-line no-alert
       alert("Could not load tasks: " + error.message);
     } else {
-      setTasks(data || []);
+      setTasks(sortTasks(data || []));
     }
     setLoading(false);
   }
@@ -50,7 +59,7 @@ export default function Tasks() {
     e.preventDefault();
     if (!user) return;
     setSaving(true);
-    const payload = { ...form, owner_id: user.id };
+    const payload = { ...form, owner_id: user.id, status: "pending" };
     const { data, error } = await supabase
       .from("tasks")
       .insert(payload)
@@ -64,7 +73,7 @@ export default function Tasks() {
       return;
     }
 
-    setTasks((prev) => [...prev, data]);
+    setTasks((prev) => sortTasks([...prev, data]));
     setForm(defaultForm);
   }
 
@@ -81,7 +90,9 @@ export default function Tasks() {
       alert("Could not update task: " + error.message);
       return;
     }
-    setTasks((prev) => prev.map((t) => (t.id === task.id ? data : t)));
+    setTasks((prev) =>
+      sortTasks(prev.map((t) => (t.id === task.id ? data : t)))
+    );
   }
 
   return (

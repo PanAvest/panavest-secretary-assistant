@@ -37,7 +37,7 @@ export default class AppErrorBoundary extends React.Component {
               onClick={this.handleReload}
               className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-md bg-panablue text-white hover:bg-panablue/90"
             >
-              Refresh dashboard
+              Reload assistant
             </button>
             <p className="text-[10px] text-slate-400">
               If this keeps happening, tell Kennedy that the app error boundary
