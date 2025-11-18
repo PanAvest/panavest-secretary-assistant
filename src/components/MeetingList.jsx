@@ -14,6 +14,20 @@ function renderStatusBadge(status) {
   return <span className={`${base} bg-slate-50 text-slate-700 border-slate-200`}>{status || "scheduled"}</span>;
 }
 
+function formatTime(value) {
+  if (!value) return value;
+  try {
+    const date = new Date(`1970-01-01T${value}`);
+    return new Intl.DateTimeFormat(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }).format(date);
+  } catch (_err) {
+    return value;
+  }
+}
+
 export default function MeetingList({
   meetings,
   loading = false,
@@ -46,13 +60,13 @@ export default function MeetingList({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-medium text-sm md:text-base">{m.title}</h3>
-            {m.meeting_date && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
-                {m.meeting_date} {m.start_time ? `• ${m.start_time}` : ""}
-              </span>
-            )}
-            {m.status && renderStatusBadge(m.status)}
-          </div>
+              {m.meeting_date && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
+                  {m.meeting_date} {m.start_time ? `• ${formatTime(m.start_time)}` : ""}
+                </span>
+              )}
+              {m.status && renderStatusBadge(m.status)}
+            </div>
 
             {m.venue && (
               <p className="text-xs text-gray-600 mt-1">Venue: {m.venue}</p>

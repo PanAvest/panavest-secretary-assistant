@@ -146,6 +146,20 @@ export default function Dashboard() {
     month: "short",
   });
 
+  const formatTime = (value) => {
+    if (!value) return value;
+    try {
+      const date = new Date(`1970-01-01T${value}`);
+      return new Intl.DateTimeFormat(undefined, {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      }).format(date);
+    } catch (_err) {
+      return value;
+    }
+  };
+
   const renderStatusBadge = (status) => {
     const base =
       "text-[11px] px-2 py-0.5 rounded-full border font-medium inline-flex items-center";
@@ -262,7 +276,7 @@ export default function Dashboard() {
                       <div className="flex items-center gap-2">
                         {m.start_time && (
                           <span className="text-[11px] px-2 py-0.5 rounded-full bg-panablue/5 text-panablue">
-                            {m.start_time}
+                            {formatTime(m.start_time)}
                           </span>
                         )}
                         {renderStatusBadge(m.status)}
@@ -316,7 +330,7 @@ export default function Dashboard() {
                       <div className="flex items-center gap-2">
                         <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
                           {m.meeting_date}
-                          {m.start_time ? ` • ${m.start_time}` : ""}
+                          {m.start_time ? ` • ${formatTime(m.start_time)}` : ""}
                         </span>
                         {renderStatusBadge(m.status)}
                       </div>
