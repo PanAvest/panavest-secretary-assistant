@@ -11,6 +11,7 @@ export default function Dashboard() {
 
   const [todayMeetings, setTodayMeetings] = useState([]);
   const [upcomingMeetings, setUpcomingMeetings] = useState([]);
+  const [pastMeetings, setPastMeetings] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [loadingMeetings, setLoadingMeetings] = useState(true);
   const [loadingTasks, setLoadingTasks] = useState(true);
@@ -29,7 +30,6 @@ export default function Dashboard() {
         .from("meetings")
         .select("*")
         .eq("owner_id", user.id)
-        .gte("meeting_date", todayStr)
         .order("meeting_date", { ascending: true })
         .order("start_time", { ascending: true });
 
@@ -53,6 +53,7 @@ export default function Dashboard() {
         alert("Could not load meetings: " + mErr.message);
         setTodayMeetings([]);
         setUpcomingMeetings([]);
+        setPastMeetings([]);
       } else {
         const todays = allMeetings.filter(
           (row) => row.meeting_date === todayStr
@@ -60,8 +61,13 @@ export default function Dashboard() {
         const upcoming = allMeetings.filter(
           (row) => row.meeting_date > todayStr
         );
+        const past = allMeetings
+          .filter((row) => row.meeting_date < todayStr)
+          .slice(-5) // last 5 past for quick glance
+          .reverse(); // show most recent first
         setTodayMeetings(todays);
         setUpcomingMeetings(upcoming);
+        setPastMeetings(past);
       }
 
       if (tErr) {
@@ -325,6 +331,46 @@ export default function Dashboard() {
                         {m.agenda}
                       </div>
                     )}
+                    {m.attendees_text && (
+                      <div className="text-[11px] text-slate-500">
+                        Attendees: {m.attendees_text}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Past meetings (recent) */}
+          <div className="mt-4">
+            <h3 className="text-xs font-semibold text-slate-700 mb-2">
+              Recent past meetings
+            </h3>
+            {loadingMeetings ? (
+              <div className="py-3 text-xs text-slate-500">Loading...</div>
+            ) : pastMeetings.length === 0 ? (
+              <div className="py-3 text-xs text-slate-500">
+                No past meetings recorded.
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-32 overflow-auto">
+                {pastMeetings.map((m) => (
+                  <div
+                    key={m.id}
+                    className="border border-slate-100 rounded-md px-3 py-2 flex flex-col gap-1 bg-white"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-xs font-medium text-slate-900">
+                        {m.title}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                          {m.meeting_date}
+                        </span>
+                        {renderStatusBadge(m.status)}
+                      </div>
+                    </div>
                     {m.attendees_text && (
                       <div className="text-[11px] text-slate-500">
                         Attendees: {m.attendees_text}

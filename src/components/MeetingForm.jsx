@@ -28,7 +28,8 @@ export default function MeetingForm({ onSave, onCancel, saving, existing }) {
       const { data, error } = await supabase
         .from("profiles")
         .select("id, full_name, email")
-        .order("full_name");
+        .order("full_name")
+        .limit(500);
 
       if (!isMounted) return;
 

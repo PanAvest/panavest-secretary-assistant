@@ -69,6 +69,13 @@ export default function MeetingList({
                 Attendees: {m.attendees_text}
               </p>
             )}
+            {!m.attendees_text &&
+              Array.isArray(m.participant_emails) &&
+              m.participant_emails.length > 0 && (
+                <p className="text-[11px] text-gray-500 mt-1">
+                  Attendees: {m.participant_emails.join(", ")}
+                </p>
+              )}
 
             {Array.isArray(m.participant_emails) &&
               m.participant_emails.length > 0 && (
