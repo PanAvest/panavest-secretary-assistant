@@ -31,6 +31,7 @@ export default function Meetings() {
     const { data, error } = await supabase
       .from("meetings")
       .select("*")
+      .eq("owner_id", user.id)
       .order("meeting_date", { ascending: false })
       .order("start_time", { ascending: false });
 
@@ -62,7 +63,8 @@ export default function Meetings() {
     const { error } = await supabase
       .from("meetings")
       .delete()
-      .eq("id", meetingId);
+      .eq("id", meetingId)
+      .eq("owner_id", user.id);
 
     if (error) {
       console.error("Error deleting meeting:", error);
@@ -97,6 +99,7 @@ export default function Meetings() {
           .from("meetings")
           .update(payload)
           .eq("id", editingMeeting.id)
+          .eq("owner_id", user.id)
           .select()
           .single();
 
@@ -155,6 +158,7 @@ export default function Meetings() {
       .from("meetings")
       .update({ status: nextStatus })
       .eq("id", meeting.id)
+      .eq("owner_id", user.id)
       .select()
       .single();
 
