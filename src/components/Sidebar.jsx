@@ -5,9 +5,9 @@ import { CalendarDays, ClipboardList, Home, Users } from "lucide-react";
 import logo from "../assets/panavest-logo.png"; // <-- add this
 
 const navItems = [
+  { to: "/dashboard", label: "Dashboard", icon: Home },
   { to: "/tasks", label: "Tasks & Follow-ups", icon: ClipboardList },
   { to: "/meetings", label: "Meetings", icon: CalendarDays },
-  { to: "/dashboard", label: "Dashboard", icon: Home },
   { to: "/contacts", label: "Contacts", icon: Users },
 ];
 

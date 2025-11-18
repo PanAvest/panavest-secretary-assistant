@@ -46,12 +46,12 @@ function AppShell() {
             <RequireAuth>
               <Layout>
                 <Routes>
-                  <Route path="/" element={<Navigate to="/tasks" replace />} />
+                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/tasks" element={<Tasks />} />
                   <Route path="/meetings" element={<Meetings />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/contacts" element={<Contacts />} />
-                  <Route path="*" element={<Navigate to="/tasks" replace />} />
+                  <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>
               </Layout>
             </RequireAuth>

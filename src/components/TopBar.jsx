@@ -10,9 +10,9 @@ import {
 } from "../lib/oneSignalClient";
 
 const navItems = [
+  { to: "/dashboard", label: "Dashboard" },
   { to: "/tasks", label: "Tasks & Follow-ups" },
   { to: "/meetings", label: "Meetings" },
-  { to: "/dashboard", label: "Dashboard" },
   { to: "/contacts", label: "Contacts" },
 ];
 
